@@ -5,9 +5,11 @@
   "scripts": {
     "build": "node reference-app/utils/build.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --config reference-app/playwright.config.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "happy-dom": "^20.9.0",
     "vitest": "^3.2.0"
   }

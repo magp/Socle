@@ -53,10 +53,24 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(content).toContain(`'${version}'`);
   });
 
+  it('rewrites import paths in main.js for dist/ layout', () => {
+    const content = readDist(mainFilename());
+    expect(content).not.toContain("'../_lib/");
+    expect(content).not.toContain("'./pages/");
+    expect(content).toContain("'./_lib/");
+    expect(content).toContain("'./app/pages/");
+  });
+
   it('injects CACHE_VERSION into sw.js', () => {
     const sw = readDist('sw.js');
     expect(sw).not.toContain('%%CACHE_VERSION%%');
     expect(sw).toMatch(new RegExp(`'${version}-[a-f0-9]{8}'`));
+  });
+
+  it('injects BASE_PATH into sw.js', () => {
+    const sw = readDist('sw.js');
+    expect(sw).not.toContain('%%BASE_PATH%%');
+    expect(sw).toContain("const BASE_PATH = '/'");
   });
 
   it('injects ASSETS array into sw.js', () => {
@@ -79,6 +93,16 @@ describe('build — default (BASE_PATH=/)', () => {
   it('copies manifest.json byte-for-byte', () => {
     const src = readFileSync(join(APP_ROOT, 'manifest.json'), 'utf8');
     expect(readDist('manifest.json')).toBe(src);
+  });
+
+  it('copies _lib/ to dist/_lib/', () => {
+    expect(existsSync(join(DIST, '_lib', 'core', 'app-element.js'))).toBe(true);
+    expect(existsSync(join(DIST, '_lib', 'core', 'router', 'router.js'))).toBe(true);
+  });
+
+  it('copies app/ to dist/app/', () => {
+    expect(existsSync(join(DIST, 'app', 'pages', 'home-page.js'))).toBe(true);
+    expect(existsSync(join(DIST, 'app', 'pages', 'not-found-page.js'))).toBe(true);
   });
 
   it('produces a deterministic hash — same content yields same filename', () => {
@@ -105,5 +129,11 @@ describe('build — custom BASE_PATH', () => {
   it('prefixes main.js src in index.html with BASE_PATH', () => {
     const html = readDist('index.html');
     expect(html).toContain('src="/my-app/main.');
+  });
+
+  it('injects custom BASE_PATH into sw.js', () => {
+    const sw = readDist('sw.js');
+    expect(sw).not.toContain('%%BASE_PATH%%');
+    expect(sw).toContain("const BASE_PATH = '/my-app/'");
   });
 });
