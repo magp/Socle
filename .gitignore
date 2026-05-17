@@ -2,3 +2,4 @@ TODO.md
 exp
 node_modules/
 reference-app/dist/
+.claude/settings.local.json
