@@ -101,6 +101,57 @@ Design tokens from `_lib/core/styles/tokens.css` are available in any component 
 
 See [components.md](components.md) for the full component guide including tiers, the subscribe/unsubscribe lifecycle, and targeted DOM update patterns.
 
+## Add a page
+
+Your scaffolded app comes with routing wired up. `main.js` registers `home-page` and `not-found-page` as the initial routes.
+
+To add a new page:
+
+1. Create a component in `app/pages/`:
+
+```js
+// app/pages/goal-page.js
+import { AppElement } from '../../_lib/core/app-element.js';
+
+class GoalPage extends AppElement {
+  template() {
+    return `
+      <style>:host { display: block; }</style>
+      <main>
+        <h1>Goal</h1>
+      </main>
+    `;
+  }
+}
+
+customElements.define('goal-page', GoalPage);
+```
+
+2. Register it in `app/main.js`:
+
+```js
+import './pages/goal-page.js';
+
+router.routes = [
+  { path: '/',          component: 'home-page' },
+  { path: '/goals/:id', component: 'goal-page' },   // ← add this
+  { path: '*',          component: 'not-found-page' },
+];
+```
+
+3. Navigate to it from anywhere in your app. The import path is relative to your file's location:
+
+```js
+// from app/pages/goal-page.js
+import { navigate } from '../../_lib/core/router/router.js';
+
+navigate('/goals/42');
+```
+
+Route parameters (`:id`) are URI-decoded and set on the page component as `this.params.id` before it renders.
+
+See [architecture.md](architecture.md) for the full router documentation including hard-refresh behaviour and the SW navigation intercept.
+
 ## Update the library
 
 ```bash

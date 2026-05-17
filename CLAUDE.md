@@ -86,6 +86,8 @@ my-app/
   - Generates `version.json`
   - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + asset list → `dist/sw.js`
   - Replaces `__APP_VERSION__` token in `app/main.js` → hashed output in `dist/`
+  - Rewrites two import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/` and `'./pages/` → `'./app/pages/`
+  - Copies `_lib/` and `app/` into `dist/` so the output is self-contained — ES modules resolve relative imports at runtime with no bundler, so everything they reference must be physically present in `dist/`. Uses `dereference: true` so the reference-app's symlinked `_lib/` is copied as real files; harmless no-op in scaffolded apps where `_lib/` is already real files
   - Accepts `BASE_PATH` env var (default `/`) for GitHub Pages subdirectory deployments
 - **Vitest** for unit tests
 - **Playwright** for E2E tests
@@ -272,6 +274,7 @@ This is the contract between the library and the user project. The update comman
 - **`_lib/` never imports from `app/`.** Dependency flows one way: `app/` → `_lib/`. Any violation breaks the update mechanism. This is a hard rule with no exceptions.
 - **CSS logical properties throughout.** Use `margin-inline-start` not `margin-left`, `padding-block` not `padding-top/bottom`, `border-inline-end` not `border-right`. This costs nothing now and makes RTL language support (V4) essentially free.
 - **Accessibility is tiered, not all-or-nothing.** Tier 1 (semantic HTML, keyboard navigation, touch targets, colour contrast, motion preferences) is required on every component — it costs almost nothing and benefits all users. Tier 2 (ARIA, screen reader support) is deferred to V4/V5 and prioritised when user feedback requests it. Shadow DOM makes ARIA non-trivial; form-heavy apps will be the trigger for this work. The `/a11y` command enforces Tier 1 as blocking and logs Tier 2 as advisory notes.
+- **Page components must include a `<main>` landmark.** Every page component's `template()` must contain a `<main>` element so assistive technologies can navigate directly to page content. This is a Tier 1 requirement and the established pattern from Phase 3.
 - **No comments explaining what code does.** Code must be self-explanatory. Comments only for *why* when non-obvious.
 - **No classes beyond Web Components and AppElement extensions.** Plain functions and modules everywhere else.
 - **ES modules throughout.** No CommonJS.
