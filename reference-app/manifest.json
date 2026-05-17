@@ -1,0 +1,11 @@
+{
+  "name": "Socle Reference App",
+  "short_name": "Socle",
+  "description": "Socle PWA library reference application",
+  "start_url": "/",
+  "lang": "en",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": []
+}

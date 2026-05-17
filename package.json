@@ -1,0 +1,13 @@
+{
+  "name": "socle",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node reference-app/utils/build.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.0"
+  }
+}

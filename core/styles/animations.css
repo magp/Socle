@@ -220,7 +220,8 @@
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.2);
   position: absolute;
-  top: 0; left: 0; bottom: 0;
+  inset-block: 0;
+  inset-inline-start: 0;
 }
 
 

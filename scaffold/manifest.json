@@ -1,0 +1,11 @@
+{
+  "name": "%%APP_NAME%%",
+  "short_name": "%%APP_SHORT_NAME%%",
+  "description": "%%APP_DESCRIPTION%%",
+  "start_url": "%%BASE_PATH%%",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "%%LANG%%",
+  "icons": []
+}

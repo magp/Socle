@@ -20,8 +20,8 @@
      COLOUR — Text
      ---------------------------------------------------------- */
   --color-text-primary:    #1C1C1E;   /* headings, primary data */
-  --color-text-secondary:  #8A8A8E;   /* labels, captions */
-  --color-text-muted:      #AEAEB2;   /* placeholder, disabled */
+  --color-text-secondary:  #8A8A8E;   /* 2.85:1 on white — large text (18px+) only, never body-sized labels */
+  --color-text-muted:      #AEAEB2;   /* 2.32:1 on white — decorative only, never actionable labels or meaningful status */
   --color-text-inverse:    #FFFFFF;   /* text on dark surfaces */
 
   /* ----------------------------------------------------------
