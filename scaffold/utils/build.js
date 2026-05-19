@@ -19,8 +19,8 @@ function contentHash(content) {
 const mainSrc = readFileSync(join(root, 'app', 'main.js'), 'utf8');
 const mainProcessed = mainSrc
   .replaceAll('__APP_VERSION__', `'${version}'`)
-  .replaceAll("'../_lib/", "'./_lib/")        // app/main.js → dist root: ../_lib → ./_lib
-  .replaceAll("'./pages/", "'./app/pages/"); // app/main.js → dist root: ./pages → ./app/pages
+  .replaceAll("'../_lib/", "'./_lib/")          // ../_lib → ./_lib (dist root)
+  .replace(/'\.\/(?!_lib\/)/g, "'./app/");      // ./anything → ./app/anything (all app-relative imports)
 const mainHash = contentHash(mainProcessed);
 const mainFilename = `main.${mainHash}.js`;
 writeFileSync(join(dist, mainFilename), mainProcessed);
