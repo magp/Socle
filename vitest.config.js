@@ -6,8 +6,13 @@ export default defineConfig({
       'core/**/*.test.js',
       'modules/**/*.test.js',
       'cli/**/*.test.js',
+      'tests/**/*.test.js',
       'reference-app/tests/unit/**/*.test.js',
     ],
+    exclude: [
+      'scaffold/**',  // scaffold/tests/ are templates for app developers, not runnable here
+    ],
     environment: 'node',
+    setupFiles: ['./core/test-setup.js'],
   },
 });
