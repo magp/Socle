@@ -41,6 +41,12 @@ export function unsubscribe(key, cb) {
   _subs.get(key)?.delete(cb);
 }
 
+export function setState(key, value) {
+  const oldState = _state;
+  _state = { ..._state, [key]: value };
+  _notify(oldState, _state);
+}
+
 export function getState() {
   return _state;
 }

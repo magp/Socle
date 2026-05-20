@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { boot, dispatch, subscribe, unsubscribe, getState, reset } from './store.js';
+import { boot, dispatch, subscribe, unsubscribe, getState, setState, reset } from './store.js';
 
 let dbSeq = 0;
 function freshName() { return `test-store-${dbSeq++}`; }
@@ -161,5 +161,40 @@ describe('subscribe / unsubscribe', () => {
     await boot({ dbName: freshName(), reducer });
     const cb = vi.fn();
     expect(() => unsubscribe('nonexistent', cb)).not.toThrow();
+  });
+});
+
+describe('setState', () => {
+  it('updates the value returned by getState', async () => {
+    await boot({ dbName: freshName(), reducer });
+    setState('updateAvailable', true);
+    expect(getState().updateAvailable).toBe(true);
+  });
+
+  it('notifies subscribers for the changed key', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const cb = vi.fn();
+    subscribe('updateAvailable', cb);
+    cb.mockClear();
+    setState('updateAvailable', true);
+    expect(cb).toHaveBeenCalledOnce();
+    expect(cb).toHaveBeenCalledWith(true);
+  });
+
+  it('does not notify subscribers for unchanged keys', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const cb = vi.fn();
+    subscribe('items', cb);
+    cb.mockClear();
+    setState('updateAvailable', true);
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it('is cleared by reset', async () => {
+    await boot({ dbName: freshName(), reducer });
+    setState('updateAvailable', true);
+    reset();
+    await boot({ dbName: freshName(), reducer });
+    expect(getState().updateAvailable).toBeUndefined();
   });
 });
