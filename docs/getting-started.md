@@ -152,6 +152,31 @@ Route parameters (`:id`) are URI-decoded and set on the page component as `this.
 
 See [architecture.md](architecture.md) for the full router documentation including hard-refresh behaviour and the SW navigation intercept.
 
+## Set up Claude Code
+
+Every scaffolded project includes Claude Code slash commands in `.claude/commands/`. They encode a structured workflow for building features correctly: scope before build, test before commit, review before ship.
+
+Before your first coding session, run:
+
+```
+/setup-claude
+```
+
+Claude reads your existing code and asks four short passes of questions about your app — purpose, users and flows, data model, and constraints. It writes an `## About this app` section into `CLAUDE.md` that every future session loads automatically. You will not need to re-explain your app each time.
+
+Once set up, the basic development loop is:
+
+```
+/scope "feature description"    ← analyse before writing code
+/component <name> <tier>        ← scaffold a new Web Component
+/test <filepath>                ← write or complete tests
+/a11y <filepath>                ← accessibility audit
+/review <filepath>              ← quality check
+/commit                         ← commit at a logical checkpoint
+```
+
+See [claude.md](claude.md) for the full command reference and workflow guide.
+
 ## Update the library
 
 ```bash

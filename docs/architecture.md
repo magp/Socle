@@ -270,6 +270,20 @@ Registers `cb` for changes to a top-level state key. Calls `cb` immediately with
 
 Removes a previously registered callback. No-op if the callback was not registered. Call in your component's `unsubscribe()` lifecycle method.
 
+#### `setState(key, value)`
+
+Updates a top-level state key in memory and notifies subscribers. Does not write to IDB — the value does not survive a page reload.
+
+Use for ephemeral runtime state: UI flags, detection results, or any value that is not a domain event and should not appear in the event log.
+
+```js
+import { setState } from '../_lib/core/store/store.js';
+
+setState('updateAvailable', true);
+```
+
+**Notes** — calling `setState` before `boot` is safe but the value will be wiped when `boot` runs and replays the event log.
+
 #### `getState()`
 
 Returns the current state snapshot. Use in tests and for debugging. Do not use in production component code — use `subscribe()` instead.
@@ -283,13 +297,23 @@ Clears all module state. **Test isolation only — never call in production code
 The SW source lives at `_lib/core/sw.js` — library-owned, never edited directly. The build processes it into `dist/sw.js`, injecting:
 
 - `CACHE_VERSION` — `{version}-{hash}`, changes on every build
-- `ASSETS` — the list of files to precache, with correct `BASE_PATH` prefixes
+- `ASSETS` — the full enumerated list of files in `_lib/` and `app/`, with correct `BASE_PATH` prefixes
+- `BASE_PATH` — URL prefix for navigation intercept
 
-The SW uses a cache-first strategy for all assets. On activate, it deletes all caches that do not match the current `CACHE_VERSION`, ensuring stale assets are cleaned up after an update.
+Cache strategy by resource type:
 
-`version.json` is never cached — it is fetched on every boot to detect available updates even before the SW update cycle fires.
+| Resource | Strategy |
+|----------|----------|
+| `version.json` | Network only — never cached, always fresh |
+| `index.html`, JS, CSS | Cache first — updated via SW lifecycle |
+| Static assets (hashed) | Cache first — filename changes when content changes |
+| Other same-origin resources | Runtime caching — cached on first fetch |
 
-The full SW update flow (waiting detection, update banner, skip-waiting) is implemented in Phase 5 by the `<sw-manager>` service component.
+On activate, all caches that do not match `CACHE_VERSION` are deleted, cleaning up stale assets from previous versions. The SW calls `clients.claim()` so it takes control on first install without requiring a page reload.
+
+The build script enumerates every file under `_lib/` and `app/` for the pre-cache list, following symlinks. Any file added to either directory is automatically included on the next build.
+
+For the full update flow — `<sw-manager>`, `<update-banner>`, skip-waiting, and the `version.json` check — see [sw-update-flow.md](sw-update-flow.md).
 
 ## Reference app
 
