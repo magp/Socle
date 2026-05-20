@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, cpSync } from 'fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, cpSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -30,16 +30,37 @@ writeFileSync(join(dist, 'version.json'), JSON.stringify({ version, buildTime: n
 
 // 3. Process _lib/core/sw.js — inject CACHE_VERSION, ASSETS, and BASE_PATH
 const swSrc = readFileSync(join(root, '_lib', 'core', 'sw.js'), 'utf8');
-const assets = [BASE_PATH, `${BASE_PATH}${mainFilename}`, `${BASE_PATH}manifest.json`];
+
+function enumerateAssets(dir, urlPrefix) {
+  const result = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue;
+    const fullPath = join(dir, entry.name);
+    const urlPath = `${urlPrefix}${entry.name}`;
+    const isDir = entry.isDirectory() || (entry.isSymbolicLink() && statSync(fullPath).isDirectory());
+    if (isDir) {
+      result.push(...enumerateAssets(fullPath, `${urlPath}/`));
+    } else {
+      result.push(urlPath);
+    }
+  }
+  return result;
+}
+
+const libAssets = enumerateAssets(join(root, '_lib'), `${BASE_PATH}_lib/`);
+const appAssets = enumerateAssets(join(root, 'app'), `${BASE_PATH}app/`);
+const assets = [BASE_PATH, `${BASE_PATH}${mainFilename}`, `${BASE_PATH}manifest.json`, ...libAssets, ...appAssets];
 const swProcessed = swSrc
   .replace('%%CACHE_VERSION%%', `${version}-${mainHash}`)
   .replace('%%ASSETS%%', JSON.stringify(assets))
   .replace('%%BASE_PATH%%', BASE_PATH);
 writeFileSync(join(dist, 'sw.js'), swProcessed);
 
-// 4. Process index.html — inject hashed main.js path
+// 4. Process index.html — inject hashed main.js path, app version, and base path
 const indexProcessed = readFileSync(join(root, 'index.html'), 'utf8')
-  .replace('%%MAIN_JS%%', `${BASE_PATH}${mainFilename}`);
+  .replace('%%MAIN_JS%%', `${BASE_PATH}${mainFilename}`)
+  .replace('__APP_VERSION__', version)
+  .replace('base-path="/"', `base-path="${BASE_PATH}"`);
 writeFileSync(join(dist, 'index.html'), indexProcessed);
 
 // 5. Copy manifest.json
