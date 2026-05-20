@@ -47,6 +47,23 @@ Read the command files that were used or are relevant to what was built. Check:
 
 Also check: is there a command file that should exist but doesn't, based on a repeating pattern in this session?
 
+### Step 3b — Check if scaffold commands need regeneration
+
+Run `git diff --name-only HEAD .claude/commands/` and `git status .claude/commands/` to see if any library command files were added or modified this session.
+
+If any were changed, add this to the report:
+
+```
+## Scaffold sync required
+The following library commands changed this session:
+  - .claude/commands/<name>.md
+
+Run /generate-claude before the next release to propagate these changes
+to scaffold/.claude/commands/. The scaffold versions are now stale.
+```
+
+If no command files changed, note "Scaffold commands — no changes this session, no /generate-claude needed."
+
 ### Step 4 — Report findings
 
 Use this format:

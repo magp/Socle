@@ -30,7 +30,21 @@ commit. A release without updated templates is incomplete.
 
 ## What to do
 
-### Step 1 — Audit each library command for app relevance
+### Step 1 — Identify what changed since last generation
+
+Run `git log --oneline scaffold/.claude/` to find the last commit that touched the scaffold Claude files. Then run `git diff <that-commit> --name-only .claude/commands/` to see which library commands changed since then.
+
+Use this to focus the work:
+- **Changed commands**: re-adapt these from scratch using the table below — do not patch the existing scaffold version, rewrite it cleanly from the current library source
+- **Unchanged commands**: verify the scaffold version still matches the library source (a quick read is sufficient); skip if confident nothing drifted
+- **New commands**: classify using the table, adapt or exclude accordingly
+- **Deleted commands**: remove from `scaffold/.claude/commands/` if they were included
+
+If you cannot determine what changed (e.g. no prior generation commit exists), do a full regeneration of all included commands.
+
+---
+
+### Step 2 — Audit each library command for app relevance
 
 Read every file in `.claude/commands/` and classify it using this table.
 Update the table if commands have been added or significantly changed since
@@ -58,7 +72,7 @@ the last generation run — this table is the record of every decision made.
 
 ---
 
-### Step 2 — Write adapted commands to `scaffold/.claude/commands/`
+### Step 3 — Write adapted commands to `scaffold/.claude/commands/`
 
 One file per included command. Apply the adaptation rules from the table above.
 
@@ -72,7 +86,7 @@ an app developer with no knowledge of the library's internals.
 
 ---
 
-### Step 3 — Generate `scaffold/CLAUDE.md.template`
+### Step 4 — Generate `scaffold/CLAUDE.md.template`
 
 The app CLAUDE.md is stamped with tokens at scaffold time. Write it with:
 
@@ -137,7 +151,7 @@ Replaces _lib/ only. Your app/ code is never touched.
 
 ---
 
-### Step 4 — Write the app `/status` command
+### Step 5 — Write the app `/status` command
 
 The app version checks app completeness, not library build phases.
 Write it to `scaffold/.claude/commands/status.md`:
@@ -183,7 +197,7 @@ Then: "Recommended next step: [specific task]"
 
 ---
 
-### Step 5 — Report
+### Step 6 — Report
 
 List every file written to `scaffold/`. Note any commands where library-specific
 content was found and removed. Flag anything that needs a human decision before

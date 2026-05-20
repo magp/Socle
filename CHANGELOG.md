@@ -9,6 +9,28 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `setState(key, value)` on the store — updates in-memory state and notifies subscribers without writing to IDB; use for ephemeral runtime state that does not belong in the event log
+- `<sw-manager>` service component (`core/sw-manager/sw-manager.js`) — owns SW registration, waiting detection, `version.json` polling, and `controllerchange` reload; two-layer update detection with first-install guard
+- `<update-banner>` UI component (`core/components/update-banner/update-banner.js`) — fixed-position notification banner subscribed to `updateAvailable`; Reload posts `SKIP_WAITING` to the waiting SW; Dismiss hides without reloading; respects `--safe-area-top`; `role="alert"` for screen readers
+- `core/strings.js` — flat key registry: `defineStrings(obj)` merges English defaults, `t(key)` looks up with key-as-fallback; `app/strings.js` must be the first import in `app/main.js` so strings register before any component renders
+- `app/strings.js` (scaffold and reference app) — English defaults for update-banner strings; pattern for all future `_lib/` component strings
+- SW runtime caching — same-origin responses stored on first fetch for offline availability; pre-cache now enumerates all `_lib/` and `app/` files via the build script
+- `version.json` — generated on every build; fetched network-only by the SW and by `<sw-manager>` for Layer 2 update detection
+- Playwright `serviceWorkers: 'allow'` added to reference app and scaffold configs
+- E2E tests — `offline.spec.js`, `update-flow.spec.js`, `persistence.spec.js`, `install.spec.js` (manual checklist); SW navigation intercept test enabled
+- Scaffold Claude Code commands — 12 app-developer commands in `scaffold/.claude/commands/`: component, review, scope, test, commit, docs, migration, i18n, a11y, test-pwa, status, setup-claude
+- `scaffold/CLAUDE.md.template` — stamped by CLI with app name, version, accent colour, and selected modules
+- `/setup-claude` command — interactively builds `CLAUDE.md` app-context section by reading existing code and asking structured questions about purpose, flows, data model, and constraints
+- `docs/sw-update-flow.md` — guide to the two-layer update system, sw-manager, update-banner, strings, asset pre-caching, and manual verification checklist
+- `docs/claude.md` — guide to using Claude Code in a scaffolded app: /setup-claude, workflow, command reference
+
+### Changed
+- Build script enumerates all files under `_lib/` and `app/` for the SW pre-cache list, following symlinks — full offline support from first visit without manual asset list maintenance
+- `docs/architecture.md` — store API updated with `setState`; SW section expanded with cache strategy table
+- `docs/getting-started.md` — Claude Code setup section added
+- `README.md` — status table updated, new docs linked
+
+### Added (Phase 4)
 - Store module (`core/store/store.js`) — singleton event store with `boot()`, `dispatch()`, `subscribe()`, `unsubscribe()`, `getState()`, and `reset()` (test isolation only)
 - IDB wrapper (`core/idb/idb.js`) — Promise-based `openDB`, `put`, `getAll`; zero dependencies, ~35 lines
 - Schema migration runner (`core/idb/migrations.js`) — versioned array of migration functions; runs inside `boot()` before any UI renders; throws on missing version to halt startup visibly

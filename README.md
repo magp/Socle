@@ -43,10 +43,10 @@ node utils/build.js
 
 - [Getting started](docs/getting-started.md) — scaffold, first component, deploy
 - [Architecture](docs/architecture.md) — event sourcing, store, router, Service Worker
+- [SW update flow](docs/sw-update-flow.md) — sw-manager, update banner, version.json, strings
 - [Building components](docs/components.md) — AppElement, Shadow DOM, store integration
-- [Gestures](docs/gestures.md) — gesture mixin API and interaction patterns
+- [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude
 - [Theming](docs/theming.md) — CSS tokens, custom properties, retheming
-- [Updating](docs/updating.md) — how `_lib/` updates work
 - [Accessibility](docs/a11y.md) — tiered accessibility approach
 - [UI language](.claude/ui.md) — visual design system and interaction patterns
 
@@ -78,8 +78,10 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 
 | Module | Status |
 |--------|--------|
-| Core (router, store, IDB, SW) | 🚧 In progress |
-| Gesture library | 🚧 In progress |
+| Core — AppElement, Router, Store, IDB | ✅ Complete |
+| SW lifecycle — offline caching, update flow, update banner | ✅ Complete |
+| Claude Code integration — slash commands, /setup-claude | ✅ Complete |
+| Gesture library | 🚧 Phase 6 |
 | P2P sync | 📋 Planned V2 |
 | Multilingual support | 📋 Planned V4 |
 

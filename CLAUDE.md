@@ -86,7 +86,8 @@ my-app/
 - **Minimal build script** at `utils/build.js` (plain Node.js, no build framework) that:
   - Stamps asset filenames with a content hash
   - Generates `version.json`
-  - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + asset list → `dist/sw.js`
+  - Enumerates all files under `_lib/` and `app/` to build the SW pre-cache asset list. Follows symlinks via `statSync` — required because reference-app's `_lib/core` and `_lib/modules` are symlinks; the dereferenced copies in `dist/` are real files.
+  - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + full asset list → `dist/sw.js`
   - Replaces `__APP_VERSION__` token in `app/main.js` → hashed output in `dist/`
   - Rewrites import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/`, and all other app-relative imports (`'./anything`) → `'./app/anything` using the regex `/'\.\/(?!_lib\/)/g` — catches any new app-relative imports automatically without needing to add new rules per directory
   - Copies `_lib/` and `app/` into `dist/` so the output is self-contained — ES modules resolve relative imports at runtime with no bundler, so everything they reference must be physically present in `dist/`. Uses `dereference: true` so the reference-app's symlinked `_lib/` is copied as real files; harmless no-op in scaffolded apps where `_lib/` is already real files
@@ -128,11 +129,13 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - Components call `Store.subscribe(key, callback)` in their `subscribe()` method.
 - Components dispatch actions (type + payload). Store writes to IDB, updates state, notifies subscribers.
 - Components never touch IDB directly.
-- One-way data flow always: Action → Store → IDB → State → Component.
+- One-way data flow for domain state: Action → Store → IDB → State → Component.
+- Ephemeral runtime state bypasses IDB: setState → State → Component.
 
 **API:**
 - `boot({ dbName, reducer, deviceId?, version? })` — opens IDB, runs migrations, replays event log via `reducer`, sets initial state. Must be `await`ed in `main.js` before the router or any component renders. The only entry point to IDB at startup.
 - `dispatch(type, payload, occurredAt?)` — writes a full event `{ id, deviceId, recordedAt, occurredAt, type, payload }` to IDB, applies reducer, notifies subscribers of changed state keys. Throws if called before `boot`.
+- `setState(key, value)` — updates in-memory state and notifies subscribers for that key. Does NOT write to IDB. Use for ephemeral runtime state (e.g. `updateAvailable`) that is not part of the event log and does not survive a reload.
 - `subscribe(key, cb)` — registers a callback for a top-level state key. Calls `cb` immediately with the current value.
 - `unsubscribe(key, cb)` — removes the callback. No-op if not registered.
 - `getState()` — returns the current state snapshot. For debugging and test assertions.
@@ -161,14 +164,15 @@ All components extend `AppElement extends HTMLElement`. It provides:
   - `version.json` — Network only, never cached
   - App shell (`index.html`, JS, CSS) — Cache first, updated via SW lifecycle
   - Static assets — Cache first with hashed filenames
+  - All other same-origin resources — runtime caching: served from network on first fetch, stored in the active cache for subsequent offline use.
 - On activate: delete all caches that don't match current `CACHE_VERSION`.
 
 ### Update Flow
 
 Two-layer system:
 
-1. **SW waiting detection (runtime):** `navigator.serviceWorker.ready` → watch for `waiting` SW → show update banner → on user tap, `postMessage({ type: 'SKIP_WAITING' })` → SW calls `skipWaiting()` → `controllerchange` fires → `location.reload()`. Never auto-apply `skipWaiting`.
-2. **version.json (informational):** Fetched on boot, compared to embedded `APP_VERSION`. Shows "update available" even before the SW is ready.
+1. **SW waiting detection (runtime):** `navigator.serviceWorker.register()` → check for already-`waiting` SW or watch `updatefound` → show update banner → on user tap, `postMessage({ type: 'SKIP_WAITING' })` → SW calls `skipWaiting()` → `controllerchange` fires → `location.reload()`. Never auto-apply `skipWaiting`. Guard: `controllerchange` also fires on first install when the SW calls `clients.claim()`. Only reload when a previous controller existed — capture `navigator.serviceWorker.controller` before registering and check it in the handler.
+2. **version.json (informational):** Fetched on boot, compared to embedded `APP_VERSION`. Shows "update available" immediately, before any SW update check completes.
 
 A `<sw-manager>` service component owns both layers. An `<update-banner>` UI component subscribes to the relevant store key.
 
@@ -212,7 +216,7 @@ The data model (append-only event log with `deviceId`) is designed for this from
 
 Full i18n is a V4 feature. Two habits must be followed from day one to make V4 non-breaking:
 
-1. **No hardcoded strings in `_lib/` components.** Every user-visible string comes from a strings object passed in or resolved from a locale module. Even before V4 exists, write `strings.updateAvailable` not `'Update available'`. Apps provide their own strings objects.
+1. **No hardcoded strings in `_lib/` components.** The V1 strings system is `core/strings.js`: a flat key registry. `_lib/` components call `t('namespace.key')` for every user-visible string. Apps register English defaults at startup by calling `defineStrings({ 'namespace.key': 'English text' })` in `app/strings.js`, which must be the **first import in `app/main.js`** — static imports are hoisted, so strings must be registered before any component's `connectedCallback` fires.
 2. **CSS logical properties only** (already required in Coding Standards). `margin-inline-start`, `padding-block-end`, `border-inline-end` — never directional (`left`, `right`, `top`, `bottom`) in layout properties. RTL layout becomes a single `dir="rtl"` attribute on the root.
 
 When V4 arrives, the i18n module will provide:
@@ -292,6 +296,7 @@ This is the contract between the library and the user project. The update comman
 - **CSS custom properties for all design values.** No hardcoded colours, spacing, or typography values in component styles.
 - **Every key feature has a test before the feature is considered done.** Not full TDD, but no unfinished feature without coverage.
 - **Fail loudly.** Silent failures and fallbacks that hide errors are not acceptable, especially in the data layer.
+- **Fixed-position components must account for safe area insets.** Any element using `position: fixed` with `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` to avoid overlapping device notches or dynamic islands. `--safe-area-top` resolves to `0px` on flat screens — zero cost.
 - **Solve real problems, not imagined ones.** Do not add configuration or fallback behaviour for problems that have not been observed in practice.
 
 ---
@@ -395,5 +400,7 @@ They answer different questions. Running one does not substitute for the other.
 **Before committing:** run `/docs changelog` to log the work, then `/commit`. Do not let Claude Code commit on its own initiative outside of this command.
 
 **Before releasing a version:** run `/docs all`, then `/generate-claude`, then tag the release. In that order — docs first, app templates second, tag last.
+
+**If any library command files changed during development:** run `/generate-claude` before the release commit — modified library commands do not flow to `scaffold/.claude/commands/` automatically. `/update-meta` will flag this at the end of any session where commands changed.
 
 **When in doubt about whether something belongs in the library:** run `/scope`. When in doubt about code quality: run `/review`. When in doubt about accessibility: run `/a11y`. These are cheap to run and expensive to skip.

@@ -27,8 +27,11 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: corresponding test files
 
 5. **SW lifecycle + update flow**
+   - Check: `core/strings.js` (t/defineStrings registry)
    - Check: `core/sw-manager/sw-manager.js`, `core/components/update-banner/update-banner.js`
    - Check: `version.json` generation in build script
+   - Check: `reference-app/app/strings.js` (English defaults, first import in `app/main.js`)
+   - Check: `reference-app/tests/e2e/offline.spec.js`, `update-flow.spec.js`, `install.spec.js`
 
 6. **Gesture library**
    - Check: `modules/gestures/gestures.js`, registered gestures (tap, longPress, swipe, leaveTouchToSelect, drag, dragMenu)
