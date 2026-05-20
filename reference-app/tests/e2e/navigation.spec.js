@@ -44,8 +44,7 @@ test.describe('Router — back navigation', () => {
 });
 
 test.describe('Router — SW navigation intercept', () => {
-  // SW registration is Phase 5 (<sw-manager>). Re-enable after Phase 5.
-  test.skip('serves app shell on hard refresh at a non-root URL', async ({ page }) => {
+  test('serves app shell on hard refresh at a non-root URL', async ({ page }) => {
     await page.goto('/');
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await page.evaluate(() => {
