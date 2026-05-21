@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { boot, dispatch, getState, reset } from '../../_lib/core/store/store.js';
 import { reducer } from '../../app/store/reducer.js';
 import '../../app/pages/home-page.js';
@@ -59,9 +59,8 @@ describe('home-page — store integration', () => {
     await boot({ dbName: freshName(), reducer });
     const el = mount();
     el.shadowRoot.querySelector('#add').click();
-    await new Promise(r => setTimeout(r, 0));
+    await vi.waitFor(() => expect(el.shadowRoot.querySelector('#count').textContent).toBe('1'));
     expect(getState().goals).toHaveLength(1);
-    expect(el.shadowRoot.querySelector('#count').textContent).toBe('1');
   });
 });
 
