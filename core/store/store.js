@@ -12,6 +12,7 @@ export async function boot({ dbName, version = CURRENT_VERSION, reducer, deviceI
   _deviceId = deviceId;
   _db = await openDB(dbName, version, runMigrations);
   const events = await getAll(_db, 'events');
+  events.sort((a, b) => a.recordedAt - b.recordedAt || (a.deviceId > b.deviceId ? 1 : -1));
   _state = events.reduce(reducer, {});
 }
 
