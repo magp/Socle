@@ -108,6 +108,12 @@ describe('build — default (BASE_PATH=/)', () => {
     expect(existsSync(join(DIST, 'app', 'pages', 'not-found-page.js'))).toBe(true);
   });
 
+  it('produces a deterministic hash — same content yields same filename', () => {
+    const first = mainFilename();
+    rmSync(DIST, { recursive: true, force: true });
+    runBuild();
+    expect(mainFilename()).toBe(first);
+  });
 });
 
 describe('build — custom BASE_PATH', () => {

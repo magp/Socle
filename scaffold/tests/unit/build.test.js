@@ -57,8 +57,8 @@ describe('build — default (BASE_PATH=/)', () => {
     const content = readDist(mainFilename());
     expect(content).not.toContain("'../_lib/");
     expect(content).toContain("'./_lib/");
-    expect(content).toContain("'./app/pages/");
     expect(content).toContain("'./app/store/");
+    expect(content).toContain("'./app/pages/");
     // General invariant: no bare app-relative imports remain after rewriting
     const unrewritten = content.match(/'\.\/(?!app\/|_lib\/)/g);
     expect(unrewritten, 'unrewritten app-relative imports found').toBeNull();

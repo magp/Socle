@@ -6,7 +6,7 @@ export default defineConfig({
       'core/**/*.test.js',
       'modules/**/*.test.js',
       'cli/**/*.test.js',
-      'tests/**/*.test.js',
+      'library_tests/**/*.test.js',
       'reference-app/tests/unit/**/*.test.js',
     ],
     exclude: [
