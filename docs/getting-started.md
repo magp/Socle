@@ -58,6 +58,48 @@ The build script:
 
 Output goes to `dist/`. Serve `dist/` locally during development or let GitHub Actions do it on deploy.
 
+## Testing on a real device
+
+Service workers only register on HTTPS or `localhost`. If you test at `http://192.168.x.x:3000` from a phone, the SW silently fails to register and offline mode never works. Use a locally-trusted HTTPS cert instead.
+
+### One-time setup
+
+Install [mkcert](https://github.com/FiloSottile/mkcert) and create a local CA:
+
+```bash
+brew install mkcert   # or: choco install mkcert / apt install mkcert
+mkcert -install       # adds the CA to your desktop browser trust store
+```
+
+Generate a cert for your machine's LAN IP (find it with `ipconfig getifaddr en0` on Mac):
+
+```bash
+cd my-app
+mkcert localhost 192.168.1.x   # replace with your actual LAN IP
+```
+
+This creates `localhost+1.pem` and `localhost+1-key.pem` in the project root. Both are gitignored automatically.
+
+### Start the HTTPS dev server
+
+```bash
+npm run dev:https
+```
+
+The app is now at `https://localhost:3000` (desktop) and `https://192.168.1.x:3000` (mobile).
+
+### Trust the CA on Android
+
+Your Android device needs to trust the mkcert CA once:
+
+1. Find the CA cert: `mkcert -CAROOT` — copy `rootCA.pem` to your device (AirDrop, USB, or temporarily serve it over HTTP)
+2. On the device: Settings → Security → More security settings → Install a certificate → CA certificate → pick the file
+3. Open `https://192.168.1.x:3000` — no cert warning means it's working
+
+The SW will now register and the app will work offline after the first visit.
+
+---
+
 ## Deploy to GitHub Pages
 
 Push to `main`. The included `deploy.yml` workflow builds the app and deploys `dist/` to GitHub Pages automatically.
@@ -176,6 +218,17 @@ Once set up, the basic development loop is:
 ```
 
 See [claude.md](claude.md) for the full command reference and workflow guide.
+
+## Run the tests
+
+Your project comes with Vitest and Playwright already configured. Some tests run immediately against the scaffolded code:
+
+```bash
+npm test               # Vitest unit tests
+npm run test:e2e       # Playwright E2E (requires npm run dev in another terminal)
+```
+
+See [testing.md](testing.md) for the full testing guide — environments, patterns for component tests and store integration tests, and how to extend the provided E2E tests for your domain.
 
 ## Update the library
 

@@ -9,16 +9,24 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- `Gestures(Base)` class mixin (`modules/gestures/gestures.js`) — tap and long-press gestures using Pointer Events; normalised event object; automatic pointer event wiring and cleanup on connect/disconnect; `touch-action` and `user-select` set per gesture type
-- `goal-card` UI component (`reference-app/app/components/goal-card/goal-card.js`) — first component using the Gestures mixin; tap to toggle, long press to delete; keyboard alternatives (Enter/Space → tap, Delete/Backspace → long press); `aria-pressed` and `aria-label` for accessibility
-- `dev` and `serve` npm scripts in scaffold and reference app — `npm run dev` builds then serves at port 3000; `npm run serve` serves a previously built `dist/`
-- Deterministic hash test added to `reference-app/tests/unit/build.test.js` — verifies the same content produces the same hashed filename across two independent builds
-- `docs/gestures.md` — full gesture library guide: mixin usage, two-layer model, implemented gestures, event object, coordination rules, keyboard alternatives, testing guidance, and API reference
+- Swipe gesture in mixin (`onSwipeMove`, `onSwipe`) — horizontal pointer tracking with velocity, directional discrimination (yields to native vertical scroll when `|dy| >= |dx|`), and `touch-action: pan-y`
+- Hold-drag gesture in mixin (`onHoldDragStart`, `onHoldDrag`, `onHoldDragEnd`) — 500ms hold to commit, then free drag; `touch-action: none`; takes priority over long-press when both are defined
+- `Gestures.attach(element, handlers)` static method — attaches hold-drag and/or swipe gestures to a child sub-element; returns a cleanup function; calls `stopPropagation` on `pointerdown` to keep child and host gesture states independent
+- `goal-card` UI component (`reference-app/app/components/goal-card/`) — swipe-to-reveal left (delete) and right (complete) action panels; hold-drag progress bar with `Gestures.attach`; keyboard arming via Arrow keys on host; `role="slider"` progress bar with Arrow/Home/End key control; aria-hidden toggling on action panels; all strings via `t()` from `app/strings.js`
+- `dev:https` npm script in scaffold and reference app — builds then serves with a locally-trusted TLS cert for mobile SW testing
+- `docs/testing.md` — testing guide covering the three-tier test structure, Vitest environments, fake-indexeddb, pointer capture mocks, async DOM assertions, and component and store test patterns
 
 ### Changed
+- `Gestures(Base)` class mixin (`modules/gestures/gestures.js`) — tap and long-press gestures using Pointer Events; normalised event object; automatic pointer event wiring and cleanup on connect/disconnect; `touch-action` and `user-select` set per gesture type
+- `goal-card` gesture event object now includes `dx` and `dy` fields for both mixin and `Gestures.attach` events
+- SW install handler now uses `Promise.allSettled` instead of `Promise.all` — a single failed asset fetch no longer aborts the entire pre-cache and blocks SW install
+- Build script now filters test files (`.test.js`, `test-setup.js`) and SW source (`sw.js`) from the pre-cache asset list — these files are not served to the browser
+- `docs/gestures.md` updated with swipe, hold-drag, `Gestures.attach`, coordination rules, haptics guidance, and full API reference
+- Reference app unit test suite expanded — `goal-card.test.js` (62 tests), `home-page.test.js` (13 tests), `store.test.js` (8 tests) covering goal:completion-changed, goal:deleted, hold-drag reset path, aria-hidden panel toggling, host arrow-key arming, and home-page event wiring
+- Reference app E2E `persistence.spec.js` rewritten — removed stale `aria-pressed` assertions; now tests completion state via `aria-valuenow` and deletion via keyboard shortcut
+- `scaffold/tests/e2e/persistence.spec.js` added — count and accumulation persistence tests run immediately; comment block shows the pattern for domain-specific assertions
 - Library infrastructure tests moved from `tests/` to `library_tests/` at monorepo root — makes the folder's purpose immediately clear to a new contributor
-- Reducer `goal:added` property spread order fixed — `{ ...event.payload, id: event.id, completed: false }` ensures the event `id` is always authoritative, even if payload carries an `id` field
-- Gesture architecture formalised as hybrid model: mixin for host-level gestures (zero boilerplate), `Gestures.attach(element, type, handler)` static method for child sub-elements (deferred until first use case)
+- Reducer `goal:added` property spread order fixed — `{ ...event.payload, id: event.id, completion: 0 }` ensures the event `id` is always authoritative, even if payload carries an `id` field
 - Library slogan updated to "Build Offline Mobile Apps"
 
 ### Added (Phase 5)

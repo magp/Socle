@@ -45,7 +45,8 @@ node utils/build.js
 - [Architecture](docs/architecture.md) — event sourcing, store, router, Service Worker
 - [SW update flow](docs/sw-update-flow.md) — sw-manager, update banner, version.json, strings
 - [Building components](docs/components.md) — AppElement, Shadow DOM, store integration
-- [Gestures](docs/gestures.md) — gesture mixin, tap, long press, keyboard alternatives
+- [Gestures](docs/gestures.md) — gesture mixin, tap, long press, swipe, hold-drag, keyboard alternatives
+- [Testing](docs/testing.md) — test environments, fake-indexeddb, component test patterns, E2E setup
 - [Claude Code](docs/claude.md) — slash commands, workflow, /setup-claude
 - [Theming](docs/theming.md) — CSS tokens, custom properties, retheming
 - [Accessibility](docs/a11y.md) — tiered accessibility approach
@@ -82,8 +83,8 @@ Firefox and Chrome on Android and desktop. iOS Safari is not supported — users
 | Core — AppElement, Router, Store, IDB | ✅ Complete |
 | SW lifecycle — offline caching, update flow, update banner | ✅ Complete |
 | Claude Code integration — slash commands, /setup-claude | ✅ Complete |
-| Gesture library — tap, long press | ✅ Complete |
-| Gesture library — swipe, drag, drag-to-complete | 📋 Planned Phase 6+ |
+| Gesture library — tap, long press, swipe, hold-drag | ✅ Complete |
+| Gesture library — drag-to-reorder | 📋 Planned |
 | P2P sync | 📋 Planned V2 |
 | Multilingual support | 📋 Planned V4 |
 
