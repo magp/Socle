@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { boot, dispatch, getState, reset } from '../../_lib/core/store/store.js';
 import { reducer } from '../../app/store/reducer.js';
+import '../../app/strings.js';
 import '../../app/pages/home-page.js';
 
 let dbSeq = 0;
@@ -61,6 +62,74 @@ describe('home-page — store integration', () => {
     el.shadowRoot.querySelector('#add').click();
     await vi.waitFor(() => expect(el.shadowRoot.querySelector('#count').textContent).toBe('1'));
     expect(getState().goals).toHaveLength(1);
+  });
+});
+
+describe('home-page — goal card rendering', () => {
+  it('renders a goal-card for each goal in state', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'First' });
+    await dispatch('goal:added', { title: 'Second' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(2));
+  });
+
+  it('removes a goal-card when a goal is deleted', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'Ephemeral' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
+    await dispatch('goal:deleted', { id: getState().goals[0].id });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(0));
+  });
+
+  it('updates an existing goal-card when completion changes rather than replacing it', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'Stable card' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
+    const cardBefore = el.shadowRoot.querySelector('goal-card');
+    await dispatch('goal:completion-changed', { id: getState().goals[0].id, completion: 40 });
+    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(40));
+    expect(el.shadowRoot.querySelector('goal-card')).toBe(cardBefore);
+  });
+});
+
+describe('home-page — event wiring', () => {
+  it('goal-delete event dispatches goal:deleted to store', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'To remove' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
+    const id = getState().goals[0].id;
+    el.shadowRoot.querySelector('#goals').dispatchEvent(
+      new CustomEvent('goal-delete', { bubbles: true, composed: true, detail: { id } })
+    );
+    await vi.waitFor(() => expect(getState().goals).toHaveLength(0));
+  });
+
+  it('goal-completion-change event dispatches goal:completion-changed to store', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'Test' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
+    const id = getState().goals[0].id;
+    el.shadowRoot.querySelector('#goals').dispatchEvent(
+      new CustomEvent('goal-completion-change', { bubbles: true, composed: true, detail: { id, completion: 60 } })
+    );
+    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(60));
+  });
+
+  it('goal-completion-change with completion 100 stores the value', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount();
+    await dispatch('goal:added', { title: 'Test' });
+    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
+    const id = getState().goals[0].id;
+    el.shadowRoot.querySelector('#goals').dispatchEvent(
+      new CustomEvent('goal-completion-change', { bubbles: true, composed: true, detail: { id, completion: 100 } })
+    );
+    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(100));
   });
 });
 

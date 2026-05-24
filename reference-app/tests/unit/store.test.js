@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { boot, dispatch, subscribe, getState, reset } from '../../_lib/core/store/store.js';
 import { reducer } from '../../app/store/reducer.js';
@@ -45,5 +44,31 @@ describe('reference-app store integration', () => {
     await dispatch('goal:added', { title: 'First' });
     await dispatch('goal:added', { title: 'Second' });
     expect(getState().goals).toHaveLength(2);
+  });
+
+  it('goal:completion-changed updates a goal completion in state', async () => {
+    await boot({ dbName: freshName(), reducer });
+    await dispatch('goal:added', { title: 'Learn piano' });
+    const id = getState().goals[0].id;
+    await dispatch('goal:completion-changed', { id, completion: 75 });
+    expect(getState().goals[0].completion).toBe(75);
+  });
+
+  it('goal:deleted removes the matching goal from state', async () => {
+    await boot({ dbName: freshName(), reducer });
+    await dispatch('goal:added', { title: 'To delete' });
+    const id = getState().goals[0].id;
+    await dispatch('goal:deleted', { id });
+    expect(getState().goals).toHaveLength(0);
+  });
+
+  it('goal:deleted leaves other goals intact', async () => {
+    await boot({ dbName: freshName(), reducer });
+    await dispatch('goal:added', { title: 'Keep me' });
+    await dispatch('goal:added', { title: 'Delete me' });
+    const deleteId = getState().goals[1].id;
+    await dispatch('goal:deleted', { id: deleteId });
+    expect(getState().goals).toHaveLength(1);
+    expect(getState().goals[0].title).toBe('Keep me');
   });
 });
