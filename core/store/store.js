@@ -16,10 +16,17 @@ export async function boot({ dbName, version = CURRENT_VERSION, reducer, deviceI
   _state = events.reduce(reducer, {});
 }
 
+function _uuid() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // crypto.randomUUID requires a secure context; getRandomValues works everywhere
+  return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+    (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16));
+}
+
 export async function dispatch(type, payload, occurredAt = Date.now()) {
   if (!_db) throw new Error('Store.dispatch called before Store.boot');
   const event = {
-    id: crypto.randomUUID(),
+    id: _uuid(),
     deviceId: _deviceId,
     recordedAt: Date.now(),
     occurredAt,

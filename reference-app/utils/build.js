@@ -35,6 +35,7 @@ function enumerateAssets(dir, urlPrefix) {
   const result = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) continue;
+    if (entry.name.endsWith('.test.js') || entry.name === 'test-setup.js' || entry.name === 'sw.js') continue;
     const fullPath = join(dir, entry.name);
     const urlPath = `${urlPrefix}${entry.name}`;
     const isDir = entry.isDirectory() || (entry.isSymbolicLink() && statSync(fullPath).isDirectory());

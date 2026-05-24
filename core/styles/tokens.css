@@ -42,6 +42,8 @@
   --color-warning-light:   #FDF4E0;
   --color-danger:          #E53535;
   --color-danger-light:    #FDEBEB;
+  --color-info:            #3B82F6;
+  --color-info-light:      #EFF6FF;
 
   /* Dark action surface — full-width dismiss/confirm buttons */
   --color-action-dark:     #1C1C1E;

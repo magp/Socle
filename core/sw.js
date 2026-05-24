@@ -4,7 +4,9 @@ const BASE_PATH = '%%BASE_PATH%%';
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_VERSION).then(cache =>
+      Promise.allSettled(ASSETS.map(url => cache.add(url)))
+    )
   );
 });
 
@@ -39,12 +41,23 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(r => {
       if (r) return r;
       return fetch(event.request).then(response => {
-        if (response.ok && new URL(event.request.url).origin === self.location.origin) {
+        // Only cache same-origin responses with the correct content type.
+        // Servers with HTML fallback routing return text/html for unknown paths —
+        // caching that as a JS/CSS file would permanently poison the cache.
+        const ct = response.headers.get('content-type') ?? '';
+        const url = event.request.url;
+        const isModule = url.endsWith('.js') || url.endsWith('.mjs');
+        const isStyle  = url.endsWith('.css');
+        if ((isModule && !ct.includes('javascript') && !ct.includes('ecmascript')) ||
+            (isStyle  && !ct.includes('css'))) {
+          return new Response('', { status: 503, statusText: 'Wrong content-type' });
+        }
+        if (response.ok && new URL(url).origin === self.location.origin) {
           const toCache = response.clone();
           caches.open(CACHE_VERSION).then(cache => cache.put(event.request, toCache));
         }
         return response;
-      });
+      }).catch(() => new Response('', { status: 503, statusText: 'Offline' }));
     })
   );
 });
