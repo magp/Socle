@@ -1,93 +1,147 @@
 import { test, expect } from '@playwright/test';
 
+const currentYear = new Date().getFullYear();
+
 const waitForHomePage = page => page.waitForFunction(() =>
   !!document.querySelector('app-router')?.shadowRoot?.querySelector('home-page')
 );
 
+function homePage(page) {
+  return page.evaluate(fn => fn(), () =>
+    document.querySelector('app-router')?.shadowRoot?.querySelector('home-page')
+  );
+}
+
+async function createCapstoneGoal(page, title) {
+  // Enter edit mode so the Add button is visible
+  await page.evaluate(() => {
+    document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('#capstone-edit-btn').click();
+  });
+  // Open the dialog
+  await page.evaluate(() => {
+    document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('#add-capstone').click();
+  });
+  // Wait for dialog to open
+  await page.waitForFunction(() => {
+    const d = document.querySelector('app-router')?.shadowRoot
+      ?.querySelector('home-page')?.shadowRoot
+      ?.querySelector('goal-dialog')?.shadowRoot
+      ?.querySelector('dialog');
+    return d?.open;
+  });
+  // Fill and save
+  await page.evaluate((t) => {
+    const inp = document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('goal-dialog').shadowRoot
+      .querySelector('input');
+    inp.value = t;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('app-router').shadowRoot
+      .querySelector('home-page').shadowRoot
+      .querySelector('goal-dialog').shadowRoot
+      .querySelector('#save').click();
+  }, title);
+  // Wait for item to appear
+  await page.waitForFunction(() => {
+    const list = document.querySelector('app-router')?.shadowRoot
+      ?.querySelector('home-page')?.shadowRoot
+      ?.querySelector('#capstone-list');
+    return list?.querySelectorAll('goal-item').length > 0;
+  });
+}
+
+function getCapstoneItem(page) {
+  return page.evaluate(() => {
+    const item = document.querySelector('app-router')?.shadowRoot
+      ?.querySelector('home-page')?.shadowRoot
+      ?.querySelector('#capstone-list goal-item');
+    return item ? { title: item._goal?.title, percentage: item._goal?.percentage } : null;
+  });
+}
+
 test.describe('Data persistence', () => {
-  test('goal count persists across page reload', async ({ page }) => {
-    await page.goto('/');
+  test('capstone goal title persists across page reload', async ({ page }) => {
+    await page.goto(`/${currentYear}`);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await waitForHomePage(page);
 
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('1');
+    await createCapstoneGoal(page, 'Run a marathon');
 
     await page.reload();
     await waitForHomePage(page);
-    await expect(page.locator('home-page #count')).toHaveText('1');
-  });
 
-  test('multiple goals accumulate and persist across reload', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
-    await waitForHomePage(page);
-
-    await page.locator('home-page #add').click();
-    await page.locator('home-page #add').click();
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('3');
-
-    await page.reload();
-    await waitForHomePage(page);
-    await expect(page.locator('home-page #count')).toHaveText('3');
-  });
-
-  test('goal completion state persists across reload', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
-    await waitForHomePage(page);
-
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('1');
-
-    // Dispatch a completion-change event directly — tests the persistence path
-    // without depending on gesture mechanics (covered separately by unit tests)
-    await page.evaluate(() => {
-      const goals = document.querySelector('home-page')?.shadowRoot?.querySelector('#goals');
-      const card = goals?.querySelector('goal-card');
-      if (!card) return;
-      goals.dispatchEvent(new CustomEvent('goal-completion-change', {
-        bubbles: true, composed: true,
-        detail: { id: card._goal.id, completion: 50 },
-      }));
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length > 0;
     });
 
-    // Wait for DOM to reflect the store update before reloading
-    await page.waitForFunction(() =>
-      document.querySelector('home-page')?.shadowRoot
-        ?.querySelector('goal-card')?.shadowRoot
-        ?.querySelector('.progress-bar')?.getAttribute('aria-valuenow') === '50'
-    );
-
-    await page.reload();
-    await waitForHomePage(page);
-
-    const completionAfterReload = await page.evaluate(() =>
-      document.querySelector('home-page')?.shadowRoot
-        ?.querySelector('goal-card')?.shadowRoot
-        ?.querySelector('.progress-bar')?.getAttribute('aria-valuenow')
-    );
-    expect(completionAfterReload).toBe('50');
+    const item = await getCapstoneItem(page);
+    expect(item?.title).toBe('Run a marathon');
   });
 
-  test('deleted goal does not reappear after reload', async ({ page }) => {
-    await page.goto('/');
+  test('capstone goal progress persists across page reload', async ({ page }) => {
+    await page.goto(`/${currentYear}`);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await waitForHomePage(page);
 
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('1');
+    await createCapstoneGoal(page, 'Persistence test');
 
-    // Focus the card and use keyboard Delete shortcut
-    await page.evaluate(() =>
-      document.querySelector('home-page')?.shadowRoot?.querySelector('goal-card')?.focus()
-    );
-    await page.keyboard.press('Delete');
-    await expect(page.locator('home-page #count')).toHaveText('0');
+    // One keystroke then capture the resulting value. Firing many events in a tight loop
+    // is unreliable: dispatches share the same recordedAt timestamp so IDB replay
+    // ordering is UUID-random on reload.
+    await page.evaluate(() => {
+      const bar = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item').shadowRoot
+        .querySelector('.bar');
+      bar?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    });
+
+    await page.waitForFunction(() => {
+      const item = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('#capstone-list goal-item');
+      return (item?._goal?.percentage ?? 0) > 0;
+    });
+
+    const before = await getCapstoneItem(page);
 
     await page.reload();
     await waitForHomePage(page);
-    await expect(page.locator('home-page #count')).toHaveText('0');
+
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot?.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length > 0;
+    });
+
+    const after = await getCapstoneItem(page);
+    expect(after?.percentage).toBe(before?.percentage);
+  });
+
+  test('year navigation shows independent goals per year', async ({ page }) => {
+    await page.goto(`/${currentYear}`);
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+    await waitForHomePage(page);
+
+    const prevYear = currentYear - 1;
+    await page.goto(`/${prevYear}`);
+    await waitForHomePage(page);
+
+    // #year lives inside year-header's shadow root, not home-page's directly
+    const yearDisplayed = await page.evaluate(() =>
+      document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('year-header')?.shadowRoot
+        ?.querySelector('#year')?.textContent
+    );
+    expect(yearDisplayed).toBe(String(prevYear));
   });
 });

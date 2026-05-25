@@ -1,144 +1,178 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { boot, dispatch, getState, reset } from '../../_lib/core/store/store.js';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { boot, dispatch, reset } from '../../_lib/core/store/store.js';
 import { reducer } from '../../app/store/reducer.js';
 import '../../app/strings.js';
 import '../../app/pages/home-page.js';
+import '../../app/components/goal-item/goal-item.js';
+import '../../app/components/year-header/year-header.js';
+
+HTMLElement.prototype.setPointerCapture    = () => {};
+HTMLElement.prototype.releasePointerCapture = () => {};
 
 let dbSeq = 0;
 function freshName() { return `home-page-test-${dbSeq++}`; }
 
-function mount() {
+function mount(year = 2026) {
   const el = document.createElement('home-page');
+  el.params = { year: String(year) };
   document.body.appendChild(el);
+  // Stub the year-header's menu dialog so showModal doesn't throw
+  const header = el.shadowRoot.querySelector('year-header');
+  if (header) {
+    const dialog = header.shadowRoot.querySelector('dialog');
+    if (dialog) { dialog.showModal = () => {}; dialog.close = () => {}; }
+  }
   return el;
 }
 
-beforeEach(() => reset());
-afterEach(() => { document.body.innerHTML = ''; });
+afterEach(() => { document.body.innerHTML = ''; reset(); });
 
-describe('home-page — rendering', () => {
-  it('renders a <main> landmark in shadow DOM', async () => {
-    await boot({ dbName: freshName(), reducer });
+describe('home-page — structure', () => {
+  it('renders a <main> landmark', () => {
     const el = mount();
     expect(el.shadowRoot.querySelector('main')).not.toBeNull();
   });
 
-  it('shows initial goal count of 0', async () => {
-    await boot({ dbName: freshName(), reducer });
+  it('renders a year-header component', () => {
     const el = mount();
-    expect(el.shadowRoot.querySelector('#count').textContent).toBe('0');
+    expect(el.shadowRoot.querySelector('year-header')).not.toBeNull();
   });
 
-  it('count paragraph has role="status" for screen reader announcements', async () => {
-    await boot({ dbName: freshName(), reducer });
+  it('renders the capstone section', () => {
     const el = mount();
-    expect(el.shadowRoot.querySelector('p[role="status"]')).not.toBeNull();
+    expect(el.shadowRoot.querySelector('#capstone-section')).not.toBeNull();
   });
 
+  it('renders milestone and wow sections', () => {
+    const el = mount();
+    expect(el.shadowRoot.querySelector('#milestone-section')).not.toBeNull();
+    expect(el.shadowRoot.querySelector('#wow-section')).not.toBeNull();
+  });
+});
+
+describe('home-page — capstone edit mode', () => {
+  it('capstone section shows edit class when edit button clicked', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#capstone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#capstone-section').classList.contains('edit')).toBe(true);
+  });
+
+  it('capstone edit button text becomes Done when active', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#capstone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#capstone-edit-btn').textContent).toBe('Done');
+  });
+
+  it('capstone edit button text returns to Edit on second click', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#capstone-edit-btn').click();
+    el.shadowRoot.querySelector('#capstone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#capstone-edit-btn').textContent).toBe('Edit');
+    expect(el.shadowRoot.querySelector('#capstone-section').classList.contains('edit')).toBe(false);
+  });
+
+  it('capstone edit is independent of milestone and wow edits', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#capstone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#milestone-section').classList.contains('edit')).toBe(false);
+    expect(el.shadowRoot.querySelector('#wow-section').classList.contains('edit')).toBe(false);
+  });
+});
+
+describe('home-page — milestone edit mode', () => {
+  it('milestone section shows edit class when edit button clicked', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#milestone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#milestone-section').classList.contains('edit')).toBe(true);
+  });
+
+  it('milestone edit button text becomes Done when active', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#milestone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#milestone-edit-btn').textContent).toBe('Done');
+  });
+
+  it('milestone edit button text returns to Edit on second click', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#milestone-edit-btn').click();
+    el.shadowRoot.querySelector('#milestone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#milestone-edit-btn').textContent).toBe('Edit');
+    expect(el.shadowRoot.querySelector('#milestone-section').classList.contains('edit')).toBe(false);
+  });
+
+  it('wow section edit is independent of milestone edit', () => {
+    const el = mount();
+    el.shadowRoot.querySelector('#milestone-edit-btn').click();
+    expect(el.shadowRoot.querySelector('#wow-section').classList.contains('edit')).toBe(false);
+  });
 });
 
 describe('home-page — store integration', () => {
-  it('count updates when a goal is dispatched', async () => {
+  it('renders capstone goal-items when goals dispatched', async () => {
     await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'Test goal' });
-    expect(el.shadowRoot.querySelector('#count').textContent).toBe('1');
-  });
-
-  it('mounts with correct count when store already has goals', async () => {
-    const name = freshName();
-    await boot({ dbName: name, reducer });
-    await dispatch('goal:added', { title: 'Pre-existing' });
-    reset();
-    await boot({ dbName: name, reducer });
-    const el = mount();
-    expect(el.shadowRoot.querySelector('#count').textContent).toBe('1');
-  });
-
-  it('add button dispatches goal:added and updates the count', async () => {
-    await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    el.shadowRoot.querySelector('#add').click();
-    await vi.waitFor(() => expect(el.shadowRoot.querySelector('#count').textContent).toBe('1'));
-    expect(getState().goals).toHaveLength(1);
-  });
-});
-
-describe('home-page — goal card rendering', () => {
-  it('renders a goal-card for each goal in state', async () => {
-    await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'First' });
-    await dispatch('goal:added', { title: 'Second' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(2));
-  });
-
-  it('removes a goal-card when a goal is deleted', async () => {
-    await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'Ephemeral' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
-    await dispatch('goal:deleted', { id: getState().goals[0].id });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(0));
-  });
-
-  it('updates an existing goal-card when completion changes rather than replacing it', async () => {
-    await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'Stable card' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
-    const cardBefore = el.shadowRoot.querySelector('goal-card');
-    await dispatch('goal:completion-changed', { id: getState().goals[0].id, completion: 40 });
-    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(40));
-    expect(el.shadowRoot.querySelector('goal-card')).toBe(cardBefore);
-  });
-});
-
-describe('home-page — event wiring', () => {
-  it('goal-delete event dispatches goal:deleted to store', async () => {
-    await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'To remove' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
-    const id = getState().goals[0].id;
-    el.shadowRoot.querySelector('#goals').dispatchEvent(
-      new CustomEvent('goal-delete', { bubbles: true, composed: true, detail: { id } })
+    const el = mount(2026);
+    await dispatch('goal:title-set', { year: '2026', id: 'c1', title: 'Grand Capstone' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#capstone-list').querySelectorAll('goal-item').length).toBe(1)
     );
-    await vi.waitFor(() => expect(getState().goals).toHaveLength(0));
   });
 
-  it('goal-completion-change event dispatches goal:completion-changed to store', async () => {
+  it('capstone section removes empty class when goals exist', async () => {
     await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'Test' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
-    const id = getState().goals[0].id;
-    el.shadowRoot.querySelector('#goals').dispatchEvent(
-      new CustomEvent('goal-completion-change', { bubbles: true, composed: true, detail: { id, completion: 60 } })
+    const el = mount(2026);
+    await dispatch('goal:title-set', { year: '2026', id: 'c1', title: 'Grand Capstone' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#capstone-section').classList.contains('empty')).toBe(false)
     );
-    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(60));
   });
 
-  it('goal-completion-change with completion 100 stores the value', async () => {
+  it('renders milestone goal-items when milestones dispatched', async () => {
     await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    await dispatch('goal:added', { title: 'Test' });
-    await vi.waitFor(() => expect(el.shadowRoot.querySelectorAll('goal-card').length).toBe(1));
-    const id = getState().goals[0].id;
-    el.shadowRoot.querySelector('#goals').dispatchEvent(
-      new CustomEvent('goal-completion-change', { bubbles: true, composed: true, detail: { id, completion: 100 } })
+    const el = mount(2026);
+    await dispatch('milestone:title-set', { year: '2026', id: 'm1', title: 'Q1 target' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#milestone-list').querySelectorAll('goal-item').length).toBe(1)
     );
-    await vi.waitFor(() => expect(getState().goals[0].completion).toBe(100));
   });
-});
 
-describe('home-page — lifecycle', () => {
-  it('dispatching after disconnect does not throw and store remains functional', async () => {
+  it('milestone section removes empty class when items exist', async () => {
     await boot({ dbName: freshName(), reducer });
-    const el = mount();
-    document.body.removeChild(el);
-    await expect(dispatch('goal:added', { title: 'After disconnect' })).resolves.toBeUndefined();
-    expect(getState().goals).toHaveLength(1);
+    const el = mount(2026);
+    await dispatch('milestone:title-set', { year: '2026', id: 'm1', title: 'Q1' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#milestone-section').classList.contains('empty')).toBe(false)
+    );
+  });
+
+  it('renders wow goal-items when wow dispatched', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount(2026);
+    await dispatch('wow:title-set', { year: '2026', id: 'w1', title: 'First marathon' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#wow-list').querySelectorAll('goal-item').length).toBe(1)
+    );
+  });
+
+  it('does not show milestones for a different year', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount(2026);
+    await dispatch('milestone:title-set', { year: '2025', id: 'm1', title: 'Past milestone' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#milestone-section').classList.contains('empty')).toBe(true)
+    );
+  });
+
+  it('removes goal-item when milestone deleted', async () => {
+    await boot({ dbName: freshName(), reducer });
+    const el = mount(2026);
+    await dispatch('milestone:title-set', { year: '2026', id: 'm1', title: 'Q1' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#milestone-list').querySelectorAll('goal-item').length).toBe(1)
+    );
+    await dispatch('milestone:deleted', { year: '2026', id: 'm1' });
+    await vi.waitFor(() =>
+      expect(el.shadowRoot.querySelector('#milestone-list').querySelectorAll('goal-item').length).toBe(0)
+    );
   });
 });

@@ -27,7 +27,49 @@ test.describe('Offline behaviour', () => {
 
     await context.setOffline(true);
 
-    await page.locator('home-page #add').click();
-    await expect(page.locator('home-page #count')).toHaveText('1');
+    // Enter edit mode and open the add-capstone dialog
+    await page.evaluate(() => {
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-edit-btn').click();
+    });
+    await page.evaluate(() => {
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#add-capstone').click();
+    });
+    await page.waitForFunction(() => {
+      const d = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('goal-dialog')?.shadowRoot
+        ?.querySelector('dialog');
+      return d?.open;
+    });
+    await page.evaluate(() => {
+      const inp = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('input');
+      inp.value = 'Offline goal';
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('goal-dialog').shadowRoot
+        .querySelector('#save').click();
+    });
+    await page.waitForFunction(() => {
+      const list = document.querySelector('app-router')?.shadowRoot
+        ?.querySelector('home-page')?.shadowRoot
+        ?.querySelector('#capstone-list');
+      return list?.querySelectorAll('goal-item').length > 0;
+    });
+
+    const title = await page.evaluate(() => {
+      const item = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('#capstone-list goal-item');
+      return item?._goal?.title;
+    });
+    expect(title).toBe('Offline goal');
   });
 });
