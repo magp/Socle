@@ -37,8 +37,12 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `modules/gestures/gestures.js`, implemented gestures: tap, longPress, swipe (`onSwipe`/`onSwipeMove`), holdDrag (`onHoldDragStart`/`onHoldDrag`/`onHoldDragEnd`), `Gestures.attach` static method
    - Check: `modules/gestures/gestures.test.js`
 
-7. **Reference app features**
-   - Check: reference-app pages, components using the library, Playwright E2E tests
+7. **Reference app features (YourYear)**
+   - Check: `reference-app/app/pages/year-redirect.js`, `home-page.js`, `not-found-page.js`
+   - Check: `reference-app/app/components/goal-item/`, `goal-dialog/`, `year-header/`
+   - Check: `reference-app/app/store/reducer.js` handles `GOAL_SET`, `GOAL_PROGRESS_SET`, `GOAL_FAIL`
+   - Check: `reference-app/tests/e2e/goals.spec.js`, `persistence.spec.js` cover creation, deletion, progress, fail/restore
+   - Check: `reference-app/tests/e2e/navigation.spec.js` covers year routing and scroll compression
 
 8. **CLI scaffolding tool**
    - Check: `cli/index.js`, prompts for module selection

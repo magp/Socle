@@ -9,25 +9,40 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- YourYear reference app — yearly goals PWA demonstrating the full library stack: year-scoped routing, event-sourced store, hold-drag gestures, offline-first, SW update banner
+- `year-redirect` page — redirects `/` to `/${currentYear}` via `navigate()`
+- `year-header` UI component — year label with prev/next arrows; gains `.compact` class on scroll past 80px, loses it below 60px (hysteresis)
+- `goal-item` UI component — goal progress bar with hold-drag (`Gestures.attach`) and keyboard Arrow key alternative; `role="slider"`; action button deletes in edit mode, fails/restores outside it; intra-shadow `role="status"` live region announces state changes via `t()`
+- `goal-dialog` UI component — native `<dialog>` for goal title input; `aria-modal="true"`; emits `goal-saved` / `goal-cancelled`
+- `home-page` — three goal sections (capstone, 3-month milestones, wow moments); per-section edit mode; tab bar (`role="tablist"`, `aria-selected`) switching between Goals and Lists panels; year-keyed store subscription; `role="list"` on each goal list
+- Store event types `GOAL_SET`, `GOAL_PROGRESS_SET`, `GOAL_FAIL` — year-keyed state shape: `goals: { [year]: [{ id, title, percentage }] }`
+- E2E test suite (`goals.spec.js`) — creation for all three sections, deletion (single and multiple with survivor check), hold-drag progress, fail/restore lifecycle, persistence across reload
+- Navigation E2E additions — year routing (home-page renders at `/:year`), scroll compression (compact class on/off)
 - Swipe gesture in mixin (`onSwipeMove`, `onSwipe`) — horizontal pointer tracking with velocity, directional discrimination (yields to native vertical scroll when `|dy| >= |dx|`), and `touch-action: pan-y`
-- Hold-drag gesture in mixin (`onHoldDragStart`, `onHoldDrag`, `onHoldDragEnd`) — 500ms hold to commit, then free drag; `touch-action: none`; takes priority over long-press when both are defined
-- `Gestures.attach(element, handlers)` static method — attaches hold-drag and/or swipe gestures to a child sub-element; returns a cleanup function; calls `stopPropagation` on `pointerdown` to keep child and host gesture states independent
-- `goal-card` UI component (`reference-app/app/components/goal-card/`) — swipe-to-reveal left (delete) and right (complete) action panels; hold-drag progress bar with `Gestures.attach`; keyboard arming via Arrow keys on host; `role="slider"` progress bar with Arrow/Home/End key control; aria-hidden toggling on action panels; all strings via `t()` from `app/strings.js`
+- Hold-drag gesture in mixin (`onHoldDragStart`, `onHoldDrag`, `onHoldDragEnd`) — 500ms hold to commit, then free drag; takes priority over long-press when both are defined
+- `Gestures.attach(element, handlers)` static method — attaches hold-drag and/or swipe gestures to a child sub-element; returns a cleanup function; `stopPropagation` on `pointerdown` keeps child and host gesture states independent
 - `dev:https` npm script in scaffold and reference app — builds then serves with a locally-trusted TLS cert for mobile SW testing
 - `docs/testing.md` — testing guide covering the three-tier test structure, Vitest environments, fake-indexeddb, pointer capture mocks, async DOM assertions, and component and store test patterns
 
 ### Changed
-- `Gestures(Base)` class mixin (`modules/gestures/gestures.js`) — tap and long-press gestures using Pointer Events; normalised event object; automatic pointer event wiring and cleanup on connect/disconnect; `touch-action` and `user-select` set per gesture type
-- `goal-card` gesture event object now includes `dx` and `dy` fields for both mixin and `Gestures.attach` events
-- SW install handler now uses `Promise.allSettled` instead of `Promise.all` — a single failed asset fetch no longer aborts the entire pre-cache and blocks SW install
-- Build script now filters test files (`.test.js`, `test-setup.js`) and SW source (`sw.js`) from the pre-cache asset list — these files are not served to the browser
+- `update-banner` — slide-down entry animation; compact bar layout using `--page-padding`; z-index reduced from 9999 to 200
+- `Gestures` mixin: hold-drag `touch-action` changed from `'none'` to `'pan-y'` during the tracking phase (before the 500ms hold timer fires), so vertical page scroll is not blocked while the user is still pressing; vertical pointer movement during hold-wait now cancels the gesture and releases pointer capture cleanly
+- `Gestures.attach`: same vertical-movement fix applied — vertical movement before hold timer fires cancels and releases
+- Playwright `webServer` passes `--single` to `serve` — SPA mode returns `index.html` for all paths, enabling SW installation on first visit to non-root routes (without this, the server returns 404 and the SW never installs)
+- `Gestures(Base)` class mixin — tap and long-press gestures using Pointer Events; normalised event object; automatic wiring and cleanup on connect/disconnect; `touch-action` and `user-select` set per gesture type
+- SW install handler now uses `Promise.allSettled` instead of `Promise.all` — a single failed asset fetch no longer aborts the entire pre-cache
+- Build script now filters test files (`.test.js`, `test-setup.js`) and SW source (`sw.js`) from the pre-cache asset list
 - `docs/gestures.md` updated with swipe, hold-drag, `Gestures.attach`, coordination rules, haptics guidance, and full API reference
-- Reference app unit test suite expanded — `goal-card.test.js` (62 tests), `home-page.test.js` (13 tests), `store.test.js` (8 tests) covering goal:completion-changed, goal:deleted, hold-drag reset path, aria-hidden panel toggling, host arrow-key arming, and home-page event wiring
-- Reference app E2E `persistence.spec.js` rewritten — removed stale `aria-pressed` assertions; now tests completion state via `aria-valuenow` and deletion via keyboard shortcut
-- `scaffold/tests/e2e/persistence.spec.js` added — count and accumulation persistence tests run immediately; comment block shows the pattern for domain-specific assertions
-- Library infrastructure tests moved from `tests/` to `library_tests/` at monorepo root — makes the folder's purpose immediately clear to a new contributor
-- Reducer `goal:added` property spread order fixed — `{ ...event.payload, id: event.id, completion: 0 }` ensures the event `id` is always authoritative, even if payload carries an `id` field
+- `scaffold/tests/e2e/persistence.spec.js` added — count and accumulation persistence tests; comment block shows the pattern for domain-specific assertions
+- Library infrastructure tests moved from `tests/` to `library_tests/` at monorepo root
 - Library slogan updated to "Build Offline Mobile Apps"
+
+### Removed
+- `goal-card` UI component (reference app) — replaced by `goal-item` with the revised goal architecture
+
+### Fixed
+- Navigation E2E tests: not-found-page tests now use `/foo/bar` (multi-segment path) — single-segment paths like `/nonexistent` match `/:year` and render home-page, never reaching the `*` wildcard
+- Persistence E2E: replaced 10 rapid `ArrowRight` dispatches (non-deterministic IDB replay when all share the same `recordedAt` ms) with a single dispatch, capturing the observed value before reload and asserting it is preserved after
 
 ### Added (Phase 5)
 - `setState(key, value)` on the store — updates in-memory state and notifies subscribers without writing to IDB; use for ephemeral runtime state that does not belong in the event log

@@ -18,7 +18,7 @@ The gesture library uses a **hybrid model**. Understand both layers before touch
 The common case. Components declare intent by overriding handler methods:
 
 ```js
-class GoalCard extends Gestures(AppElement) {
+class MyComponent extends Gestures(AppElement) {
   onTap(e)       { /* tap on the card */ }
   onLongPress(e) { /* long press on the card */ }
   onSwipe(e)     { /* swipe on the card */ }
@@ -34,7 +34,7 @@ The mixin detects which handlers are defined at `connectedCallback`, wires point
 For gestures on sub-elements that are not their own Web Components — a drag handle inside a progress bar, a sliding button within a CTA. This static method returns a cleanup function.
 
 ```js
-class GoalCard extends Gestures(AppElement) {
+class MyComponent extends Gestures(AppElement) {
   subscribe() {
     // Gesture on a child element within the shadow DOM
     this._barCleanup = Gestures.attach(

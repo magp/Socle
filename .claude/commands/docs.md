@@ -113,7 +113,7 @@ why event sourcing, why copy-not-import, why no libraries,
 why offline-first. This is what convinces a developer to use it.
 
 ## Reference app
-One paragraph on the bullet diary / fencing app. Links to reference-app/.
+One paragraph on YourYear (yearly goals app) and the upcoming fencing app. Links to reference-app/.
 
 ## Status
 Current version, what's stable, what's in progress.

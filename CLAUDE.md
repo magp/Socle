@@ -122,6 +122,7 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - An `<app-router>` component owns navigation, listens to `popstate`.
 - A `navigate(path)` helper calls `history.pushState` and dispatches a navigation event.
 - Links never cause full page loads.
+- **Route matching is segment-count sensitive.** A dynamic segment like `/:year` matches any single-segment path — `/anything` matches as `year='anything'`. Only paths with a different number of segments (e.g. `/foo/bar`) fall through to the `*` wildcard. E2E tests for the not-found route must use multi-segment paths, not single-segment unknowns.
 
 ### Store
 
@@ -185,7 +186,7 @@ A hybrid model with two layers:
 **Layer 1 — Mixin** (`Gestures(Base)`): for gestures on the host element. Components override handler methods; the mixin handles all pointer event wiring, `touch-action`, gesture state coordination, and lifecycle cleanup automatically.
 
 ```js
-class GoalCard extends Gestures(AppElement) {
+class MyComponent extends Gestures(AppElement) {
   onTap(e)            { /* fires on tap */ }
   onLongPress(e)      { /* fires after 500ms hold */ }
   onSwipe(e)          { /* fires on directional swipe end */ }
@@ -328,7 +329,7 @@ Work in this order. Do not skip ahead.
 4. Store + IDB layer (event sourcing schema, migrations, IDB wrapper)
 5. SW lifecycle + `version.json` update flow (`<sw-manager>`, `<update-banner>`)
 6. Gesture library (before any real UI — it will be needed constantly)
-7. Reference app features (bullet diary) built on the above
+7. Reference app features (yearly goals — YourYear) built on the above
 8. CLI scaffolding tool (extracted from what exists, not designed ahead of it)
 9. P2P module (V2)
 
@@ -336,12 +337,12 @@ Work in this order. Do not skip ahead.
 
 ## Reference App
 
-The first reference app is a **yearly goals app**. It exercises every core library feature:
+The first reference app is a **yearly goals app** named **YourYear**. It exercises every core library feature:
 - Offline-first (works with no connection)
-- Event sourcing (goals and items are append-only, auditable, correctable)
-- Gestures (swipe to complete an item, drag to reorder, drag-to-submit)
+- Event sourcing (goals are append-only, auditable, correctable)
+- Gestures (hold-drag on a goal bar to adjust progress percentage; keyboard Arrow keys as alternative)
 - Update flow (SW update banner)
-- Routing (year overview, goal detail, stats pages)
+- Routing (`/:year` for year overview, `/` redirects to current year, `*` for not-found)
 
 The second reference app is a **fencing competition scoring app** (built after P2P is implemented):
 - P2P sync (judges relay scores to a head scorer)
@@ -396,6 +397,7 @@ Four distinct test scopes — do not mix them:
 - `reference-app/tests/unit/` — component and store unit tests
 - `reference-app/tests/e2e/` — Playwright E2E tests
 - Cover: routing, data persistence across reload, SW update flow, offline behaviour
+- The Playwright `webServer` command must pass `--single` to `serve` (SPA mode). Without it, the static server returns 404 for non-root paths on first visit, blocking SW installation and causing all SW-dependent tests to timeout.
 
 **Scaffolded app tests** (delivered to app developers via `scaffold/`):
 - `tests/unit/` and `tests/e2e/` scaffolded with working Vitest + Playwright configs
@@ -408,6 +410,7 @@ Four distinct test scopes — do not mix them:
 - These are independent: `happy-dom` does not provide IndexedDB, and `fake-indexeddb` does not provide DOM APIs.
 - **Pointer capture mocks:** `happy-dom` does not implement `setPointerCapture` or `releasePointerCapture`. Any test file that mounts a component using the `Gestures` mixin must add at module scope: `HTMLElement.prototype.setPointerCapture = () => {};` and `HTMLElement.prototype.releasePointerCapture = () => {};`. These are no-ops — pointer capture is not exercised in unit tests. Do not add these to the global setup (`core/test-setup.js`) — they belong only in test files that mount gesture-enabled components.
 - **Async DOM assertions:** when asserting DOM state that updates in response to a store callback or other async side effect, use `vi.waitFor(() => expect(...))` rather than asserting synchronously. Store callbacks fire asynchronously after `dispatch()` — synchronous assertions will see stale DOM.
+- **Same-millisecond dispatch ordering:** dispatching multiple `store.dispatch()` calls synchronously gives all events the same `recordedAt` timestamp. On replay, IDB orders events with identical `recordedAt` by UUID key (random). Tests that fire many events in a loop and then assert a specific aggregate value after reload will produce non-deterministic results. Fix: fire one event, capture the observed state, reload, and assert the captured value was preserved — not a computed total.
 
 Rules applying to all four:
 - Test files are created alongside the feature, not after.
