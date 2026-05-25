@@ -14,7 +14,7 @@ export const Gestures = (Base) => class extends Base {
 
     if (!this._pointerDown) {
       if (hasHoldDrag) {
-        this.style.touchAction = 'none';
+        this.style.touchAction = 'pan-y';
       } else if (hasSwipe) {
         this.style.touchAction = 'pan-y';
       } else {
@@ -102,19 +102,26 @@ export const Gestures = (Base) => class extends Base {
 
     clearTimeout(this._longPressTimer);
 
+    const isVertical = Math.abs(dy) >= Math.abs(dx);
+
     if (typeof this.onSwipe === 'function') {
-      if (Math.abs(dy) >= Math.abs(dx)) {
-        // Vertical — yield to native scroll
+      if (isVertical) {
         g.phase = 'cancelled';
         this.releasePointerCapture(e.pointerId);
         this._gestureRemoveInflight();
       } else {
-        // Horizontal — take over
         g.phase = 'swipe';
         if (typeof this.onSwipeMove === 'function') {
           this.onSwipeMove(this._gestureEventDelta('swipemove', g, e.clientX, g.startY, dx, 0));
         }
       }
+    } else if (typeof this.onHoldDragStart === 'function') {
+      if (isVertical) {
+        g.phase = 'cancelled';
+        this.releasePointerCapture(e.pointerId);
+        this._gestureRemoveInflight();
+      }
+      // Horizontal during hold-wait — keep tracking, let hold timer run
     } else {
       g.phase = 'cancelled';
     }
@@ -262,14 +269,21 @@ Gestures.attach = (element, handlers) => {
     if (g.phase !== 'tracking') return;
     if (Math.sqrt(dx * dx + dy * dy) > TAP_THRESHOLD) {
       clearTimeout(longPressTimer);
+      const isVertical = Math.abs(dy) >= Math.abs(dx);
       if (hasSwipe) {
-        if (Math.abs(dy) >= Math.abs(dx)) {
+        if (isVertical) {
           g.phase = 'cancelled';
           element.releasePointerCapture(e.pointerId);
           removeInflight();
         } else {
           g.phase = 'swipe';
           handlers.onSwipeMove?.(makeEvent('swipemove', g, e.clientX, g.startY, dx, 0));
+        }
+      } else if (handlers.onHoldDragStart) {
+        if (isVertical) {
+          g.phase = 'cancelled';
+          element.releasePointerCapture(e.pointerId);
+          removeInflight();
         }
       } else {
         g.phase = 'cancelled';
@@ -315,7 +329,7 @@ Gestures.attach = (element, handlers) => {
     }
   };
 
-  element.style.touchAction = hasSwipe ? 'pan-y' : 'none';
+  element.style.touchAction = (hasSwipe || !!handlers.onHoldDragStart) ? 'pan-y' : 'none';
   element.style.userSelect = 'none';
   element.addEventListener('pointerdown', onDown);
 

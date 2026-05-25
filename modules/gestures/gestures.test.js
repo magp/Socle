@@ -430,8 +430,15 @@ describe('Gestures — holdDrag', () => {
     expect(e.direction).toBe('right');
   });
 
-  it('sets touch-action: none', () => {
-    expect(el.style.touchAction).toBe('none');
+  it('does not fire hold when vertical movement before timer', () => {
+    pdown(el, 0, 0);
+    pmove(el, 2, 50);
+    vi.advanceTimersByTime(500);
+    expect(holdDragStartSpy).not.toHaveBeenCalled();
+  });
+
+  it('sets touch-action: pan-y', () => {
+    expect(el.style.touchAction).toBe('pan-y');
   });
 
   it('sets user-select: none', () => {
@@ -516,8 +523,16 @@ describe('Gestures.attach', () => {
     expect(parentSpy).not.toHaveBeenCalled();
   });
 
-  it('sets touch-action: none on element', () => {
+  it('does not fire hold on vertical movement before timer', () => {
     Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
-    expect(child.style.touchAction).toBe('none');
+    child.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true }));
+    child.dispatchEvent(new PointerEvent('pointermove', { clientX: 2, clientY: 50, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(holdDragStartSpy).not.toHaveBeenCalled();
+  });
+
+  it('sets touch-action: pan-y on element', () => {
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
+    expect(child.style.touchAction).toBe('pan-y');
   });
 });
