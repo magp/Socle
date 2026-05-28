@@ -7,7 +7,7 @@ export default defineConfig({
     serviceWorkers: 'allow',
   },
   webServer: {
-    command: 'node utils/build.js && npx --yes serve dist -l 3000',
+    command: 'node utils/build.js && npx --yes serve dist -l 3000 --single',
     port: 3000,
     reuseExistingServer: false,
   },
