@@ -9,6 +9,32 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `modules/sync/` — new optional module: `exportData()` serialises the full event log and all blobs to a JSON payload; `importData()` merges events and images idempotently (duplicate IDs skipped); `downloadExport()` triggers a browser file download; `readImportFile()` reads and parses an uploaded JSON file; year-scoped export via `eventFilter` only includes events and images referenced by that year's events
+- `core/store/store.js` — `getAllEvents()`, `getAllBlobs()`, `importEvents(events)` added to support the sync module; these are the only safe entry points for bulk read/write outside the event-sourced dispatch cycle
+- `core/strings.js` — `t(key, params)` now supports `{placeholder}` substitution for dynamic strings (e.g. `t('sync.export-year', { year: 2026 })` → `'Export 2026'`)
+- YourYear reference app — sync menu in year-header: Export this year, Export all years, Import from file; import shows a confirm dialog with event and image counts on success or a localised error message on failure
+- YourYear reference app — `sync.*` string keys in EN, FR, and CA locale packs
+- Unit tests — `modules/sync/sync.test.js`: 17 tests covering export, import, blob scoping, year-scoped filtering, deduplication, and error handling
+- Unit tests — `year-header.test.js`: 5 new tests for sync section (button presence, export year label accuracy, label update on year navigation)
+- E2E tests — `sync.spec.js`: 12 tests covering sync menu items, export download and JSON validity, year-scoped export correctness, import error/success states, duplicate import idempotency, and full export→clear→import→reload round-trip
+
+### Changed
+- `core/store/store.js` — `attachBlob()` and `deleteBlob()` are now `async`, consistent with `getBlob()` and all other store functions (TD-01 resolved)
+- `core/store/store.js` — event sort logic extracted into a private `_sortEvents()` helper, eliminating duplicated sort expression between `boot()` and `getAllEvents()`
+- `year-header` — image overlay and progress strip colours in photo mode are now CSS custom properties (`--image-overlay-edge`, `--image-strip-bg`, `--image-strip-fill`) defined on `:host`, replacing hardcoded `rgba()` values
+- YourYear home-page — tab bar removed; Capstone, Milestones, and Wow sections are now direct children of `<main>`
+- Scaffold `playwright.config.js` — webServer command now includes `--single` flag for SPA mode; without it non-root paths return 404 on first visit, blocking SW install and breaking all SW-dependent E2E tests
+- Scaffold `app/main.js` — `setLocale(getLocale())` call added before `boot()` so the locale stored in `localStorage` is applied on page load
+
+### Fixed
+- `update-banner` — reload button contrast: `color: white` on `--color-accent` (#E8824A) gave ~2.6:1 (WCAG AA fail); replaced with `--color-text-primary` (~7.2:1)
+- YourYear year-header import dialog — `aria-modal="true"` added on `<dialog>`; `role="alert"` added on status message element; reload/cancel button order corrected (primary action first)
+- YourYear year-header — export year button label now updates when navigating to a different year (was rendered once at mount and then frozen)
+- YourYear year-header — year-scoped export now only includes blobs referenced by events in that year (previously exported all blobs regardless of scope)
+- YourYear year-header — old blob is deleted from IDB when a year photo is replaced, preventing orphaned blobs from accumulating
+- YourYear year-header — year events (`year:image-set`, `year:image-removed`) now always store `year` as a string, matching the convention used by goal, milestone, and wow events
+
+### Added
 - `core/strings.js` — multi-locale support: `setLocale(locale)` and `getLocale()` added alongside `defineStrings(obj, locale='en')`; locale persisted in `localStorage`; `t(key)` resolves active locale → `'en'` → key
 - `core/store/store.js` — `attachBlob(id, blob)`, `getBlob(id)`, `deleteBlob(id)` for binary data (photos, files) stored in a separate `images` object store outside the event log
 - `core/idb/idb.js` — `get(db, storeName, id)` and `del(db, storeName, id)` added to the wrapper

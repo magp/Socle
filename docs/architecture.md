@@ -310,6 +310,18 @@ Reads a blob record from the `images` store by id. Returns a Promise that resolv
 
 Removes a blob from the `images` store by id. Returns a Promise. Throws if called before `boot`.
 
+#### `getAllEvents()`
+
+Returns a Promise that resolves to all events in the `events` store, sorted by `recordedAt` ascending (with `deviceId` as tiebreaker). Used by the sync module — not for general use in components.
+
+#### `getAllBlobs()`
+
+Returns a Promise that resolves to all records in the `images` store as `[{ id, blob }]`. Used by the sync module.
+
+#### `importEvents(events)`
+
+Writes an array of pre-formed event objects directly to the `events` store, bypassing the reducer and subscribers. Used by the sync module during import — not for general use. The app must reload after calling this for the imported events to affect state.
+
 #### `reset()`
 
 Clears all module state. **Test isolation only — never call in production code.**
@@ -386,9 +398,16 @@ location.reload();
 
 Registers string key/value pairs for a locale. Defaults to `'en'`. Call multiple times to register multiple locales. Merges into the existing registry — later calls for the same locale override earlier keys.
 
-#### `t(key)`
+#### `t(key, params?)`
 
 Returns the string for `key` in the active locale. Falls back to English, then to the key itself if no match is found.
+
+Pass `params` to substitute `{placeholder}` tokens in the string:
+
+```js
+defineStrings({ 'export.year': 'Export {year}' });
+t('export.year', { year: 2026 }); // → 'Export 2026'
+```
 
 #### `setLocale(locale)`
 
@@ -401,6 +420,65 @@ Returns the active locale from `localStorage`, defaulting to `'en'`.
 #### `reset()`
 
 Clears all registered strings and resets the active locale to `'en'`. **Test isolation only.**
+
+## Sync module (`modules/sync/`)
+
+The sync module provides JSON-based export and import of the full app dataset — events and binary attachments. It is optional: scaffolded apps include it only if selected at `npx socle` time.
+
+### Export
+
+`exportData()` reads all events and all blobs from the store and serialises them to a JSON-safe structure. Blobs are converted to data URLs so the output is a single self-contained file.
+
+```js
+import { exportData, downloadExport } from './_lib/modules/sync/sync.js';
+
+const data = await exportData();
+downloadExport(data, 'myapp-all.json');
+```
+
+To export only a subset of events, pass an `eventFilter`:
+
+```js
+const data = await exportData({
+  eventFilter: e => String(e.payload?.year) === '2026',
+});
+downloadExport(data, '2026-only.json');
+```
+
+Year-scoped export automatically includes only the blobs referenced by the filtered events — it does not export blobs from other years.
+
+### Import
+
+`importData()` merges an exported payload into the current IDB database. Events and images that already exist (matched by `id`) are silently skipped — import is idempotent. After a successful import the app must reload for the new events to affect state.
+
+```js
+import { readImportFile, importData } from './_lib/modules/sync/sync.js';
+
+const raw  = await readImportFile(file);      // parses uploaded .json file
+const result = await importData(raw);         // { eventsAdded, imagesAdded }
+```
+
+`importData` throws if `socleVersion` in the payload does not match the library version.
+
+### API reference
+
+#### `exportData({ eventFilter? })`
+
+Returns a Promise resolving to `{ socleVersion, exportedAt, events, images }`. If `eventFilter` is provided, only matching events are included and blob export is scoped to blobs referenced by those events.
+
+#### `importData(data)`
+
+Merges `data.events` and `data.images` into IDB. Skips any event or blob whose `id` already exists. Returns `{ eventsAdded, imagesAdded }`. Throws if `data.socleVersion` does not match the current library version.
+
+#### `downloadExport(data, filename)`
+
+Serialises `data` to JSON and triggers a browser file download with the given filename.
+
+#### `readImportFile(file)`
+
+Reads a `File` object (from a file input) and returns a Promise resolving to the parsed JSON payload. Throws on invalid JSON.
+
+---
 
 ## Service Worker
 

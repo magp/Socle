@@ -144,6 +144,9 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - `attachBlob(id, blob)` — writes `{ id, blob }` to the `images` object store. For binary data (photos, files) that must not go through the event log.
 - `getBlob(id)` — reads a blob record from `images` by id. Returns `null` if not found.
 - `deleteBlob(id)` — removes a blob from `images` by id.
+- `getAllEvents()` — returns all events from IDB sorted by `recordedAt` (with `deviceId` as secondary key). Used by the sync module to build an export payload.
+- `getAllBlobs()` — returns all `{ id, blob }` records from the `images` store. Used by the sync module to include binary attachments in exports.
+- `importEvents(events)` — writes a batch of pre-formed event objects to IDB as-is, without dispatching or updating in-memory state. Idempotent — duplicate IDs are silently skipped. Throws if called before `boot`.
 - `deviceId` is an app concept, not a library concept. Apps pass it into `boot()` for P2P contexts. For single-device apps, omit it — the store defaults `deviceId` to `null` on every event.
 
 ### IDB / Data Model
@@ -218,6 +221,22 @@ Normalised event object passed to all handlers:
 
 **Implemented:** tap, long press, swipe, hold-drag, `Gestures.attach`.
 
+### Sync module (`modules/sync/`)
+
+Exports and imports app data as a JSON file. Designed for manual backup and cross-device transfer — not real-time P2P sync (that is V2).
+
+Export produces a single JSON blob containing all events and all blobs (base64-encoded) from the store. Export can be scoped to a specific year by passing a filter function. Blobs are only included when their id appears as `payload.imageId` in a filtered event — orphaned blobs are excluded automatically.
+
+Import reads the JSON file, writes events via `importEvents()` (idempotent), and writes blobs via `attachBlob()`. Returns `{ eventsAdded, imagesAdded }` counts — callers show these to the user.
+
+**Public API:**
+- `exportData(options?)` — returns `{ events, blobs }` filtered by `options.filter(event)` if provided. Blobs are base64 strings in the export payload.
+- `importData(payload)` — writes events and blobs from an export payload. Returns `{ eventsAdded, imagesAdded }`.
+- `downloadExport(filename, payload)` — triggers browser download of the export as a `.json` file.
+- `readImportFile()` — opens a file picker, reads the selected `.json` file, and returns the parsed payload.
+
+All four functions are async. `exportData` and `importData` require `Store.boot()` to have been called first.
+
 ### P2P (V2 — schema ready in V1)
 
 Two modes, both should be elegant:
@@ -244,7 +263,8 @@ Basic multi-locale support is implemented in V1. Two habits are non-negotiable f
 - `defineStrings(obj, locale = 'en')` — registers strings for a locale. Call multiple times for multiple locales.
 - `setLocale(locale)` — switches the active locale. Persists choice to `localStorage`. Falls back to `'en'` if the locale has no registered strings.
 - `getLocale()` — reads active locale from `localStorage`, defaults to `'en'`.
-- `t(key)` — resolves: active locale → `'en'` → key (never silent empty string).
+- `t(key, params?)` — resolves: active locale → `'en'` → key (never silent empty string). Optional `params` object substitutes `{placeholder}` tokens in the resolved string.
+- **`setLocale(getLocale())` must be called in `main.js` before `boot()`** — this applies the locale persisted from the previous session. Without it, the app always boots in `'en'` even when the user previously selected a different language.
 - Language switching triggers `location.reload()` — the new locale is read from `localStorage` on next boot.
 - App locale packs live at `app/locales/<locale>.js` and are imported in `app/main.js`.
 
@@ -341,7 +361,11 @@ Work in this order. Do not skip ahead.
 6. Gesture library (before any real UI — it will be needed constantly)
 7. Reference app features (yearly goals — YourYear) built on the above
 8. CLI scaffolding tool (extracted from what exists, not designed ahead of it)
-9. P2P module (V2)
+9. Scaffolded app
+10. Simple Library Webpage
+11. Simple store (a state store, not log based)
+12. P2P module (V2)
+13. Components (toast, lists...)**
 
 ---
 
