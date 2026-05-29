@@ -9,6 +9,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- PWA installability — `reference-app/app/icons/icon.svg`: YourYear icon, a 300° progress arc with a gap at the bottom centre; dark background (#1C1C1E), orange stroke (#E8824A); designed to remain readable at 48×48px
+- PWA installability — `scaffold/app/icons/icon.svg`: rotated arc (gap at top, light background #F2F1EE, charcoal stroke #2C2C2C) — open bowl metaphor for a project ready to be built
+- `reference-app/manifest.json` — `icons` array with SVG icon at 192×192 and 512×512, purpose `any maskable`; `scope: "/"` added; `theme_color` and `background_color` set to `#1C1C1E`
+- `scaffold/manifest.json` — matching icons structure with `%%TOKEN%%` placeholders; `scope: "%%BASE_PATH%%"` added
+- `reference-app/index.html` — `theme-color` meta tag updated to `#1C1C1E` to match manifest (controls Android status bar colour in installed PWA)
+- `reference-app/tests/e2e/install.spec.js` — 3 automated Playwright tests: manifest reachable with required fields, icon URL resolves, SW registration state is valid; manual install checklist retained as comments
+- `scaffold/tests/e2e/install.spec.js` — synced to match reference-app (was stale with manual-only version)
+- `TODO.md` — PWA capabilities table: 24 capabilities across 5 categories with support matrix for Chrome Android, Firefox Android, Chrome iOS, Firefox iOS, and implementation status
+
+### Fixed
+- `reference-app/utils/build.js` — `cacheHash` now includes `manifest.json` and `index.html` content; previously changes to those files produced an identical SW (304 Not Modified) and were never picked up by the update mechanism
+- `scaffold/utils/build.js` — same cacheHash fix applied (mirror of reference-app)
+- `reference-app/utils/build.js` — `index.html` was read twice (once for cacheHash, once for processing); now reuses the already-read `indexContent` variable
+
+### Added
 - `modules/sync/` — new optional module: `exportData()` serialises the full event log and all blobs to a JSON payload; `importData()` merges events and images idempotently (duplicate IDs skipped); `downloadExport()` triggers a browser file download; `readImportFile()` reads and parses an uploaded JSON file; year-scoped export via `eventFilter` only includes events and images referenced by that year's events
 - `core/store/store.js` — `getAllEvents()`, `getAllBlobs()`, `importEvents(events)` added to support the sync module; these are the only safe entry points for bulk read/write outside the event-sourced dispatch cycle
 - `core/strings.js` — `t(key, params)` now supports `{placeholder}` substitution for dynamic strings (e.g. `t('sync.export-year', { year: 2026 })` → `'Export 2026'`)

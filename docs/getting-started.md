@@ -110,6 +110,76 @@ Your app will be live at `https://your-username.github.io/your-repo-name/`.
 
 The build script automatically sets the correct base path in all asset URLs — no manual configuration needed.
 
+## Make your app installable
+
+For your app to be installable as a PWA, three things must be true: a valid `manifest.json` with an icon, a registered service worker, and HTTPS. The SW and HTTPS are handled automatically. The manifest needs your attention.
+
+### Add an icon
+
+Create `app/icons/icon.svg`. SVG is the best format — one file works at every size and scales cleanly to any device pixel ratio.
+
+Design within the 80% maskable safe zone: keep all visual elements within a circle of radius 80% of the icon size, centred on the canvas. On Android, the launcher clips icons to a circle or squircle — anything outside this zone is cropped.
+
+```xml
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- background fill for maskable mode -->
+  <rect width="512" height="512" fill="#1C1C1E"/>
+  <!-- your icon shape — keep within a 410px centred circle (80% of 512) -->
+  <path d="…" fill="none" stroke="#E8824A" stroke-width="44"/>
+</svg>
+```
+
+### Update manifest.json
+
+`manifest.json` ships in your project root. Fill in these fields before you consider the app releasable:
+
+```json
+{
+  "name": "Your App Name",
+  "short_name": "App",
+  "description": "One sentence describing the app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1C1C1E",
+  "theme_color": "#1C1C1E",
+  "icons": [
+    {
+      "src": "app/icons/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "app/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+```
+
+`theme_color` controls the Android status bar colour when the app is installed. Set it to match your app's header or background. The same value goes in `index.html`:
+
+```html
+<meta name="theme-color" content="#1C1C1E">
+```
+
+For GitHub Pages deployments, `scope` should match `BASE_PATH` (e.g. `"/my-repo/"`). The scaffold sets this automatically via the `%%BASE_PATH%%` token.
+
+### Verify installability
+
+The included `tests/e2e/install.spec.js` runs three automated checks: manifest reachable with required fields, icon URL resolves, and SW registration state is valid. Run them with:
+
+```bash
+npm run test:e2e
+```
+
+For the install prompt itself (the browser's "Add to home screen" offer), use DevTools → Application → Manifest to confirm there are no errors, then open the app twice in Chrome — the install icon appears in the address bar on second visit.
+
+---
+
 ## Write your first component
 
 All components extend `AppElement` from `_lib/core/app-element.js`. Create a file in `app/components/` and register a custom element:

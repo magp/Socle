@@ -169,6 +169,8 @@ const ASSETS = [
 
 Any file added to `_lib/` or `app/` is automatically included on the next build. No manual asset list maintenance is required.
 
+The `CACHE_VERSION` string is a hash of the built `main.js`, all files in `_lib/` and `app/`, `manifest.json`, and `index.html`. This means any change to any of those files produces a new cache version, triggers the SW update flow, and ensures users always see the latest manifest and HTML shell.
+
 Same-origin resources not in the pre-cache list are cached on first fetch via runtime caching — this covers any dynamically requested files.
 
 ---
