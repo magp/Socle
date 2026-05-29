@@ -1,0 +1,17 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#1C1C1E"/>
+  <!--
+    Progress arc: 300° clockwise, gap at the bottom centre (60° gap).
+    Start point (176, 394.6) is at 120° from east on a radius-160 circle.
+    End point  (336, 394.6) is at  60° from east.
+    large-arc-flag=1 (300° > 180°), sweep-flag=1 (clockwise).
+    Outer stroke edge stays within the 80% maskable safe zone.
+  -->
+  <path
+    d="M 176 394.6 A 160 160 0 1 1 336 394.6"
+    fill="none"
+    stroke="#E8824A"
+    stroke-width="44"
+    stroke-linecap="round"
+  />
+</svg>

@@ -38,7 +38,9 @@ const mainProcessed = mainSrc
   .replaceAll("'../_lib/", "'./_lib/")          // ../_lib → ./_lib (dist root)
   .replace(/'\.\/(?!_lib\/)/g, "'./app/");      // ./anything → ./app/anything (all app-relative imports)
 const mainHash  = contentHash(mainProcessed);
-const cacheHash = contentHash(mainProcessed + hashDir(join(root, 'app')) + hashDir(join(root, '_lib')));
+const manifestContent = readFileSync(join(root, 'manifest.json'), 'utf8');
+const indexContent    = readFileSync(join(root, 'index.html'), 'utf8');
+const cacheHash = contentHash(mainProcessed + hashDir(join(root, 'app')) + hashDir(join(root, '_lib')) + manifestContent + indexContent);
 const mainFilename = `main.${mainHash}.js`;
 writeFileSync(join(dist, mainFilename), mainProcessed);
 

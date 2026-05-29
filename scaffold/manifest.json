@@ -3,9 +3,23 @@
   "short_name": "%%APP_SHORT_NAME%%",
   "description": "%%APP_DESCRIPTION%%",
   "start_url": "%%BASE_PATH%%",
+  "scope": "%%BASE_PATH%%",
+  "lang": "%%LANG%%",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "lang": "%%LANG%%",
-  "icons": []
+  "icons": [
+    {
+      "src": "app/icons/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "app/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
