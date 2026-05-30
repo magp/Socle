@@ -2,6 +2,9 @@
   "name": "socle",
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "socle": "./cli/index.js"
+  },
   "scripts": {
     "build": "node reference-app/utils/build.js",
     "test": "vitest run",
