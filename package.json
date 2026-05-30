@@ -7,7 +7,8 @@
   },
   "scripts": {
     "build": "node reference-app/utils/build.js",
-    "test": "vitest run",
+    "test": "vitest run && playwright test --config reference-app/playwright.config.js",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config reference-app/playwright.config.js"
   },

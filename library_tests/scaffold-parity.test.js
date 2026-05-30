@@ -128,7 +128,7 @@ describe('scaffold/tests/unit/store.test.js', () => {
 describe('reference-app/package.json matches scaffold/package.json', () => {
   function refPkg() { return JSON.parse(read(refApp, 'package.json')); }
 
-  it('has the same scripts as scaffold (build, serve, dev, test, test:watch, test:e2e)', () => {
+  it('has the same scripts as scaffold (build, serve, dev, test, test:unit, test:watch, test:e2e)', () => {
     const scaffoldScripts = scaffoldPkg().scripts;
     const refScripts = refPkg().scripts;
     for (const [key, value] of Object.entries(scaffoldScripts)) {

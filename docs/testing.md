@@ -2,6 +2,19 @@
 
 Every scaffolded Socle project comes with a working Vitest and Playwright setup. This guide explains what you get, how the test environments work, and how to write tests for your own components.
 
+## Contents
+
+- [Three tiers of tests](#three-tiers-of-tests)
+- [What you get out of the box](#what-you-get-out-of-the-box)
+- [Vitest environments](#vitest-environments)
+- [fake-indexeddb](#fake-indexeddb)
+- [Pointer capture mocks](#pointer-capture-mocks)
+- [Async DOM assertions](#async-dom-assertions)
+- [Testing a component](#testing-a-component)
+- [Testing store integration in a page component](#testing-store-integration-in-a-page-component)
+- [Running tests](#running-tests)
+- [Test file locations](#test-file-locations)
+
 ---
 
 ## Three tiers of tests
@@ -206,12 +219,13 @@ it('count updates when an item is added', async () => {
 ## Running tests
 
 ```bash
-npm test               # Vitest, single run
+npm test               # unit + E2E — full test suite
+npm run test:unit      # Vitest only, single run
 npm run test:watch     # Vitest, watch mode — re-runs on file change
-npm run test:e2e       # Playwright — requires a running server (npm run dev first)
+npm run test:e2e       # Playwright only — builds and serves automatically
 ```
 
-E2E tests require the app to be built and served. Start the dev server in one terminal, then run `test:e2e` in another.
+`test:e2e` uses Playwright's `webServer` config to build the app and start a server before running — no separate terminal needed. `npm test` runs unit tests first, then E2E.
 
 ---
 
@@ -235,3 +249,7 @@ tests/
 ```
 
 Either location is fine. Co-locating is convenient for UI components; `tests/unit/` is common for page-level integration tests that boot the store.
+
+---
+
+[← Gestures](gestures.md) · [Next: Claude Code →](claude.md)

@@ -1,5 +1,22 @@
 # Getting started
 
+## Contents
+
+- [Requirements](#requirements)
+- [Scaffold a new app](#scaffold-a-new-app)
+- [What you get](#what-you-get)
+- [Build](#build)
+- [Testing on a real device](#testing-on-a-real-device)
+- [Deploy to GitHub Pages](#deploy-to-github-pages)
+- [Make your app installable](#make-your-app-installable)
+- [Write your first component](#write-your-first-component)
+- [Add a page](#add-a-page)
+- [Set up Claude Code](#set-up-claude-code)
+- [Run the tests](#run-the-tests)
+- [Update the library](#update-the-library)
+
+---
+
 ## Requirements
 
 - Node.js 20 or later (build script only — no Node at runtime)
@@ -294,8 +311,9 @@ See [claude.md](claude.md) for the full command reference and workflow guide.
 Your project comes with Vitest and Playwright already configured. Some tests run immediately against the scaffolded code:
 
 ```bash
-npm test               # Vitest unit tests
-npm run test:e2e       # Playwright E2E (requires npm run dev in another terminal)
+npm test               # unit + E2E — full test suite
+npm run test:unit      # Vitest unit tests only
+npm run test:e2e       # Playwright E2E — builds and serves automatically
 ```
 
 See [testing.md](testing.md) for the full testing guide — environments, patterns for component tests and store integration tests, and how to extend the provided E2E tests for your domain.
@@ -307,3 +325,7 @@ npx socle update
 ```
 
 This replaces `_lib/` only. Your `app/` code is never touched. If the update includes a new IDB schema version, the command flags it and you run `/migration` to review and apply it.
+
+---
+
+[← Back to README](../README.md) · [Next: Architecture →](architecture.md)
