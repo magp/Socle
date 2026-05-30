@@ -1,5 +1,13 @@
 # Theming
 
+## Contents
+
+- [Token system](#token-system)
+- [Available tokens](#available-tokens)
+- [Animations](#animations)
+
+---
+
 ## Token system
 
 All visual values — colours, spacing, typography, radii, shadows — are defined as CSS custom properties in `_lib/core/styles/tokens.css`. No component ever hardcodes a value that has a token equivalent.
@@ -59,8 +67,8 @@ margin-block-end: var(--space-lg);  /* 24px */
 ### Touch targets
 
 ```css
-min-block-size: var(--touch-target);     /* 44px — all interactive elements */
-min-block-size: var(--touch-target-lg);  /* 56px — primary actions, nav items */
+min-block-size: var(--touch-target);     /* 40px — all interactive elements */
+min-block-size: var(--touch-target-lg);  /* 52px — primary actions, nav items */
 ```
 
 ### Typography
@@ -135,3 +143,7 @@ transition: transform var(--duration-normal) var(--ease-out);
 | `--ease-in-out` | `cubic-bezier(0.4, 0, 0.2, 1)` |
 | `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` |
 | `--ease-decelerate` | `cubic-bezier(0.05, 0.7, 0.1, 1)` |
+
+---
+
+[← Claude Code](claude.md) · [Next: Accessibility →](a11y.md)

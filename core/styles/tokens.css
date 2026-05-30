@@ -103,8 +103,8 @@
   /* ----------------------------------------------------------
      TOUCH TARGETS
      ---------------------------------------------------------- */
-  --touch-target:          44px;    /* minimum tappable area */
-  --touch-target-lg:       56px;    /* primary actions, nav items */
+  --touch-target:          40px;    /* minimum tappable area */
+  --touch-target-lg:       52px;    /* primary actions, nav items */
 
   /* ----------------------------------------------------------
      BORDER RADIUS
