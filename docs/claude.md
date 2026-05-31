@@ -11,7 +11,7 @@ This guide covers how to set up Claude for your specific app, what each command 
 - [Contributing a component back to the library](#contributing-a-component-back-to-the-library)
 - [Command reference](#command-reference)
 - [Keeping `CLAUDE.md` current](#keeping-claudemd-current)
-- [Updating the library](#updating-the-library)
+- [Managing the library](#managing-the-library)
 
 ---
 
@@ -139,17 +139,20 @@ The `## About this app` section is yours. Claude uses it to understand your doma
 
 ---
 
-## Updating the library
-
-When a new version of Socle is released:
+## Managing the library
 
 ```bash
-npx socle update
+socle update           # upgrade _lib/ to the latest version
+socle manage           # interactive selector to add or remove modules
+socle add <module>     # add a single module
+socle remove <module>  # remove a module
 ```
 
-This replaces `_lib/` only. Your `app/` code and `CLAUDE.md` are never touched. If the update includes a new IDB schema version, the command flags it and you run `/migration` to review and apply it.
+`update` replaces `_lib/` only — your `app/` code and `CLAUDE.md` are never touched. If the update includes a new IDB schema version, the command flags it and you run `/migration` to review and apply it.
 
 After updating, run `/status` to check whether any new library features need wiring up in your app.
+
+See [updating.md](updating.md) for full details on each command.
 
 ---
 

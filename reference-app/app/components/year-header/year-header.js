@@ -3,6 +3,7 @@ import { Gestures } from '../../../_lib/modules/gestures/gestures.js';
 import { t, setLocale, getLocale } from '../../../_lib/core/strings.js';
 import * as Store from '../../../_lib/core/store/store.js';
 import { exportData, importData, downloadExport, readImportFile } from '../../../_lib/modules/sync/sync.js';
+import { compressImage } from '../../../_lib/modules/images/images.js';
 
 const LOCALE_LABELS = { en: 'English', fr: 'Français', ca: 'Català' };
 const IMAGE_HEADER_HEIGHT = '200px';
@@ -522,7 +523,8 @@ class YearHeader extends Gestures(AppElement) {
       if (!file) return;
       const oldImageId = Store.getState().images?.[this._year];
       const imageId = crypto.randomUUID();
-      await Store.attachBlob(imageId, file);
+      const blob = await compressImage(file, { maxWidth: 1200, quality: 0.8 });
+      await Store.attachBlob(imageId, blob);
       await Store.dispatch('year:image-set', { year: String(this._year), imageId });
       if (oldImageId) Store.deleteBlob(oldImageId);
       e.target.value = '';

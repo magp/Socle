@@ -4,9 +4,10 @@ import { Gestures } from './gestures.js';
 
 HTMLElement.prototype.setPointerCapture = () => {};
 HTMLElement.prototype.releasePointerCapture = () => {};
+navigator.vibrate = () => {};
 
 let tapSpy, longPressSpy, swipeSpy, swipeMoveSpy;
-let holdDragStartSpy, holdDragSpy, holdDragEndSpy;
+let holdDragStartSpy, holdDragSpy, holdDragEndSpy, holdDragKeySpy;
 
 customElements.define('t-tap', class extends Gestures(HTMLElement) {
   onTap(e) { tapSpy(e); }
@@ -37,6 +38,13 @@ customElements.define('t-holddrag', class extends Gestures(HTMLElement) {
   onHoldDragStart(e) { holdDragStartSpy(e); }
   onHoldDrag(e) { holdDragSpy(e); }
   onHoldDragEnd(e) { holdDragEndSpy(e); }
+});
+
+customElements.define('t-holddrag-key', class extends Gestures(HTMLElement) {
+  onHoldDragStart(e) { holdDragStartSpy(e); }
+  onHoldDrag(e) { holdDragSpy(e); }
+  onHoldDragEnd(e) { holdDragEndSpy(e); }
+  onHoldDragKey(dir) { holdDragKeySpy(dir); }
 });
 
 const pdown = (el, x = 0, y = 0) =>
@@ -444,6 +452,13 @@ describe('Gestures — holdDrag', () => {
   it('sets user-select: none', () => {
     expect(el.style.userSelect).toBe('none');
   });
+
+  it('calls navigator.vibrate(40) when hold fires', () => {
+    const vibrateSpy = vi.spyOn(navigator, 'vibrate');
+    pdown(el);
+    vi.advanceTimersByTime(500);
+    expect(vibrateSpy).toHaveBeenCalledWith(40);
+  });
 });
 
 // ─── Gestures.attach ─────────────────────────────────────────────────────────
@@ -534,5 +549,95 @@ describe('Gestures.attach', () => {
   it('sets touch-action: pan-y on element', () => {
     Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
     expect(child.style.touchAction).toBe('pan-y');
+  });
+
+  it('calls navigator.vibrate(40) when hold fires', () => {
+    const vibrateSpy = vi.spyOn(navigator, 'vibrate');
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
+    child.dispatchEvent(new PointerEvent('pointerdown', { button: 0, bubbles: true }));
+    vi.advanceTimersByTime(500);
+    expect(vibrateSpy).toHaveBeenCalledWith(40);
+  });
+});
+
+describe('Gestures — onHoldDragKey (mixin)', () => {
+  let el;
+
+  beforeEach(() => {
+    holdDragStartSpy = vi.fn();
+    holdDragSpy      = vi.fn();
+    holdDragEndSpy   = vi.fn();
+    holdDragKeySpy   = vi.fn();
+    el = document.createElement('t-holddrag-key');
+    document.body.appendChild(el);
+  });
+
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  it('calls onHoldDragKey("right") on ArrowRight', () => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(holdDragKeySpy).toHaveBeenCalledWith('right');
+  });
+
+  it('calls onHoldDragKey("left") on ArrowLeft', () => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(holdDragKeySpy).toHaveBeenCalledWith('left');
+  });
+
+  it('does not call onHoldDragKey for other keys', () => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(holdDragKeySpy).not.toHaveBeenCalled();
+  });
+
+  it('does not wire keyboard on element without onHoldDragKey', () => {
+    const plain = document.createElement('t-holddrag');
+    document.body.appendChild(plain);
+    const spy = vi.fn();
+    plain.onHoldDragKey = spy;
+    plain.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('Gestures.attach — keyboard parity', () => {
+  let child;
+
+  beforeEach(() => {
+    holdDragStartSpy = vi.fn();
+    holdDragKeySpy   = vi.fn();
+    child = document.createElement('div');
+    document.body.appendChild(child);
+  });
+
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  it('auto-sets tabindex="0" on hold-drag element', () => {
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
+    expect(child.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('does not overwrite existing tabindex', () => {
+    child.setAttribute('tabindex', '-1');
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy });
+    expect(child.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('calls onHoldDragKey("right") on ArrowRight', () => {
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy, onHoldDragKey: holdDragKeySpy });
+    child.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(holdDragKeySpy).toHaveBeenCalledWith('right');
+  });
+
+  it('calls onHoldDragKey("left") on ArrowLeft', () => {
+    Gestures.attach(child, { onHoldDragStart: holdDragStartSpy, onHoldDragKey: holdDragKeySpy });
+    child.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(holdDragKeySpy).toHaveBeenCalledWith('left');
+  });
+
+  it('cleanup removes keyboard listener', () => {
+    const cleanup = Gestures.attach(child, { onHoldDragStart: holdDragStartSpy, onHoldDragKey: holdDragKeySpy });
+    cleanup();
+    child.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(holdDragKeySpy).not.toHaveBeenCalled();
   });
 });

@@ -218,12 +218,8 @@ class GoalItem extends Gestures(AppElement) {
 
     this._onKeyDown = e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._tap(); }
-      if (e.key === 'ArrowRight') this._setPct(Math.min(100, this._pct + 5));
-      if (e.key === 'ArrowLeft')  this._setPct(Math.max(0,   this._pct - 5));
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-        if (this._pct === 100) this._celebrate();
-        this._emitProgress();
-      }
+      if (e.key === 'ArrowRight') this.onHoldDragKey('right');
+      if (e.key === 'ArrowLeft')  this.onHoldDragKey('left');
     };
     this._bar.addEventListener('keydown', this._onKeyDown);
   }
@@ -244,10 +240,15 @@ class GoalItem extends Gestures(AppElement) {
 
   onHoldDragStart() {
     this._closeReveal();
-    navigator.vibrate?.(50);
     this.classList.add('hold-active');
     this._bar.style.transition = 'none';
     this._setDragMode(true);
+  }
+
+  onHoldDragKey(dir) {
+    this._setPct(dir === 'right' ? Math.min(100, this._pct + 5) : Math.max(0, this._pct - 5));
+    if (this._pct === 100) this._celebrate();
+    this._emitProgress();
   }
 
   onHoldDrag(e) {

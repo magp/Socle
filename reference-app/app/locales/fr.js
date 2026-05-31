@@ -30,6 +30,9 @@ defineStrings({
   'goal-item.status-failed':     'Objectif marqué comme abandonné',
   'goal-item.status-restored':   'Objectif restauré',
 
+  'home.toast-goal-saved':       'Objectif enregistré',
+  'home.toast-goal-deleted':     'Objectif supprimé',
+
   'year-header.menu':            'Menu',
   'year-header.year-section':    'Cette année',
   'year-header.app-section':     'Application',

@@ -318,13 +318,20 @@ npm run test:e2e       # Playwright E2E — builds and serves automatically
 
 See [testing.md](testing.md) for the full testing guide — environments, patterns for component tests and store integration tests, and how to extend the provided E2E tests for your domain.
 
-## Update the library
+## Manage the library
+
+Four commands keep your `_lib/` in shape — all run from your project root:
 
 ```bash
-npx socle update
+socle update           # upgrade to the latest library version
+socle manage           # interactive selector to add or remove modules
+socle add <module>     # add a single module (gestures, sync, images)
+socle remove <module>  # remove a module (warns if app/ files import it)
 ```
 
-This replaces `_lib/` only. Your `app/` code is never touched. If the update includes a new IDB schema version, the command flags it and you run `/migration` to review and apply it.
+`update` replaces `_lib/` only — your `app/` code is never touched. If the update includes a new IDB schema version, run `/migration` to review and apply it.
+
+See [updating.md](updating.md) for full details on each command.
 
 ---
 

@@ -83,6 +83,7 @@ Read `modules/gestures/gestures.js` in full. Understand:
 - Add any new state fields to `this._gesture` in `_gestureDown`
 - Extend `_gestureMove` or `_gestureUp` with the new gesture's firing logic
 - Update `disconnectedCallback` cleanup if new timers or state are added
+- **If the gesture is a hold-drag variant**, also implement `onHoldDragKey(dir)` (`'left'` | `'right'`) — the library wires Arrow keys automatically when this method is defined, with a `composedPath()` guard so only focus on the host (not a shadow child) triggers it. Store the handler ref on `this._holdDragKeyHandler` so `disconnectedCallback` can remove it.
 - Update `touch-action` logic for the new gesture:
   - `tap` only → `'manipulation'`
   - `longPress` → additionally set `user-select: none`
@@ -97,6 +98,7 @@ Read `modules/gestures/gestures.js` in full. Understand:
 - Keep the `Gestures.attach` state machine in sync with the mixin's — same phase transitions, same thresholds
 - `touch-action` in `Gestures.attach` is derived from `hasSwipe` flag — update this logic if the new gesture needs different `touch-action`
 - The method must **not share state with the host's `this._gesture`** — child gestures are independent
+- **If the gesture is a hold-drag variant**, also accept `onHoldDragKey` in the handlers object. `Gestures.attach` additionally sets `tabindex="0"` on the element when hold-drag handlers are present and the element has no existing tabindex.
 
 ### 4. Normalised event object
 

@@ -9,6 +9,30 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `modules/modal-dialog/` — `<modal-dialog>` responsive component: renders as a bottom sheet on mobile (≤600px) with slide-up animation and a handle pill; renders as a centered card on desktop with fade-in; `show()` / `close()` API; `modal-close` event (`bubbles`, `composed`); default and footer slots; `_justOpened` guard prevents gesture-triggered opens from immediately dismissing via backdrop click; `aria-modal="true"`, `aria-label` forwarding from host attribute to inner `<dialog>`, `aria-hidden="true"` on decorative handle
+- `modules/app-header/` — `<app-header>` component: sticky header with default (title) and `action` slot for right-side controls; `padding-block-start` accounts for `--safe-area-top` so it clears device notches and dynamic islands
+- `modules/toast/` — `toast(message, type)` function: creates temporary DOM notifications (`info`, `success`, `error`); auto-dismisses after 3 s; fixed container with safe-area-bottom padding; container created once and reused; `<toast-manager>` service component subscribes to `_toast` store state and renders toasts
+- `modules/images/` — `compressImage(file, { maxWidth, quality })`: canvas-based JPEG compression via `OffscreenCanvas`; returns a `Blob`; defaults `maxWidth: 1200`, `quality: 0.8`; no DOM element required
+- `cli/prompt.js` — interactive terminal selector: `multiSelect(title, items)` and `singleSelect(title, items)`; supports disabled items with hint text; raw TTY mode with arrow-key navigation; falls back to sequential readline prompts when stdin is not a TTY
+- CLI — `npx socle add <module>`: copies module from library into `_lib/modules/`, updates `lib-version.json`; validates module name and checks for existing installation before copying
+- CLI — `npx socle remove <module>`: scans `app/` for import references to the module, warns if found and requires confirmation, removes `_lib/modules/<module>/`, updates `lib-version.json`
+- `scaffold/app/pages/home-page.js` — full forms card: text input, textarea, radio group, toggle switch, tab panel, modal demo via `<modal-dialog>`, toast on save; `<app-header>` added to `scaffold/index.html`
+- `scaffold/_modules/` — per-module scaffold pages generated when module is selected at scaffold time: `gestures/app/pages/gesture-page.js` (hold-drag bar demo), `sync/app/pages/sync-page.js` (export/import), `images/app/pages/images-page.js` (compress-and-store)
+- Scaffold `app/main.js` — six new module tokens (`%%SYNC_IMPORT%%`, `%%GESTURE_IMPORT%%`, `%%IMAGES_IMPORT%%`, `%%SYNC_ROUTE%%`, `%%GESTURE_ROUTE%%`, `%%IMAGES_ROUTE%%`) replaced at scaffold time based on selected modules
+- YourYear reference app — toast notifications on goal save and goal delete; `home.toast-goal-saved` and `home.toast-goal-deleted` keys in EN, FR, and CA locale packs
+
+### Changed
+- `modules/gestures/gestures.js` — `onHoldDragKey(direction)` support added to both the mixin and `Gestures.attach`: Arrow keys automatically drive hold-drag interactions; library handles wiring and cleanup so every hold-drag component gets keyboard parity without app-layer code; `Gestures.attach` auto-sets `tabindex="0"` on elements that lack it when hold-drag handlers are present
+- `modules/gestures/gestures.js` — `navigator.vibrate?.(40)` moved from app layer into the library; fires automatically on hold-drag activation; apps no longer call this themselves
+- `reference-app/app/components/goal-dialog/goal-dialog.js` — refactored to use `<modal-dialog>` as shell; removed ~60 lines of duplicate responsive CSS and the `_justOpened` / `pointerup` backdrop workaround; dispatches `goal-saved`, `goal-cancelled`, `goal-delete` as before
+- `reference-app/app/components/goal-item/goal-item.js` — `onHoldDragKey` method added; `_onKeyDown` simplified to delegate to it; manual `navigator.vibrate` call removed (now in library)
+- `reference-app/app/components/year-header/year-header.js` — year photos compressed before storage via `compressImage({ maxWidth: 1200, quality: 0.8 })`
+- CLI module selection — gestures is now an opt-in choice at scaffold time (was always included); sequential y/N prompts replaced with interactive `multiSelect` terminal UI
+
+### Fixed
+- `modules/toast/toast.js` — success toast text colour changed from `--color-text-inverse` to `--color-text-primary`; `--color-text-inverse` (white) on `--color-success` (#3D9A6E) gives ~3.43:1, which fails WCAG AA for body text
+
+### Added
 - CLI — `cli/index.js`: `npx socle <app-name>` scaffolds a new app; prompts for app name, short name, description, GitHub username, sync module selection, and accent colour; copies `scaffold/`, `core/`, and selected `modules/` into a self-contained project directory with all `%%TOKEN%%` placeholders substituted
 - CLI — `npx socle update`: checks for locally modified `_lib/` files (requires git), prompts for confirmation before overwriting, replaces `_lib/core/` and installed modules from the library source, preserves the project's customised `--color-accent` value across the update
 - `package.json` — `bin: { "socle": "./cli/index.js" }` wires the CLI entry point for `npx` distribution

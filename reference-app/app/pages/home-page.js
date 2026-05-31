@@ -2,6 +2,7 @@ import { AppElement } from '../../_lib/core/app-element.js';
 import { navigate } from '../../_lib/core/router/router.js';
 import * as Store from '../../_lib/core/store/store.js';
 import { t } from '../../_lib/core/strings.js';
+import { toast } from '../../_lib/modules/toast/toast.js';
 import '../components/year-header/year-header.js';
 import '../components/goal-item/goal-item.js';
 import '../components/goal-dialog/goal-dialog.js';
@@ -306,6 +307,7 @@ class HomePage extends AppElement {
       const prefix = EVENT_PREFIX[this._editingSection];
       const id     = this._editingGoal?.id ?? crypto.randomUUID();
       Store.dispatch(`${prefix}:title-set`, { year: String(this._year), id, title: e.detail.title });
+      toast(t('home.toast-goal-saved'), 'success');
     };
     this.shadowRoot.addEventListener('goal-saved', this._onGoalSaved);
 
@@ -313,6 +315,7 @@ class HomePage extends AppElement {
       const prefix = EVENT_PREFIX[this._editingSection];
       if (this._editingGoal) {
         Store.dispatch(`${prefix}:deleted`, { year: String(this._year), id: this._editingGoal.id });
+        toast(t('home.toast-goal-deleted'), 'info');
       }
     };
     this._dialog.addEventListener('goal-delete', this._onDialogDelete);

@@ -30,6 +30,9 @@ defineStrings({
   'goal-item.status-failed':     'Objectiu marcat com a abandonat',
   'goal-item.status-restored':   'Objectiu restaurat',
 
+  'home.toast-goal-saved':       'Objectiu desat',
+  'home.toast-goal-deleted':     "Objectiu eliminat",
+
   'year-header.menu':            'Menú',
   'year-header.year-section':    'Aquest any',
   'year-header.app-section':     'Aplicació',

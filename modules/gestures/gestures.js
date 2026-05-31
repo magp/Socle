@@ -13,9 +13,7 @@ export const Gestures = (Base) => class extends Base {
     if (!hasTap && !hasLongPress && !hasSwipe && !hasHoldDrag) return;
 
     if (!this._pointerDown) {
-      if (hasHoldDrag) {
-        this.style.touchAction = 'pan-y';
-      } else if (hasSwipe) {
+      if (hasHoldDrag || hasSwipe) {
         this.style.touchAction = 'pan-y';
       } else {
         this.style.touchAction = 'manipulation';
@@ -29,6 +27,17 @@ export const Gestures = (Base) => class extends Base {
     }
 
     this.addEventListener('pointerdown', this._pointerDown);
+
+    if (hasHoldDrag && typeof this.onHoldDragKey === 'function' && !this._holdDragKeyHandler) {
+      this._holdDragKeyHandler = e => {
+        // Only fire when the host itself is focused, not a shadow-DOM child.
+        // composedPath()[0] is the actual event target before retargeting.
+        if (e.composedPath()[0] !== this) return;
+        if (e.key === 'ArrowLeft')  this.onHoldDragKey('left');
+        if (e.key === 'ArrowRight') this.onHoldDragKey('right');
+      };
+      this.addEventListener('keydown', this._holdDragKeyHandler);
+    }
   }
 
   disconnectedCallback() {
@@ -37,17 +46,24 @@ export const Gestures = (Base) => class extends Base {
     this._gestureRemoveInflight();
     this._gesture = null;
     if (this._pointerDown) this.removeEventListener('pointerdown', this._pointerDown);
+    if (this._holdDragKeyHandler) {
+      this.removeEventListener('keydown', this._holdDragKeyHandler);
+      this._holdDragKeyHandler = null;
+    }
   }
 
   _gestureDown(e) {
     if (e.button !== 0) return;
-    this.setPointerCapture(e.pointerId);
+    // Do not capture here — capturing on pointerdown redirects click events to the
+    // host element, breaking clicks on child buttons. Capture is deferred to when
+    // the gesture type is confirmed (swipe threshold crossed, or hold timer fires).
     this.addEventListener('pointermove', this._pointerMove);
     this.addEventListener('pointerup', this._pointerUp);
     this.addEventListener('pointercancel', this._pointerCancel);
     this._gesture = {
       startX: e.clientX, startY: e.clientY,
       startTime: Date.now(),
+      pointerId: e.pointerId,
       phase: 'tracking', // 'tracking' | 'swipe' | 'holdDrag' | 'cancelled'
       originalEvent: e,
     };
@@ -56,6 +72,8 @@ export const Gestures = (Base) => class extends Base {
       this._longPressTimer = setTimeout(() => {
         if (this._gesture?.phase === 'tracking') {
           this._gesture.phase = 'holdDrag';
+          this.setPointerCapture(this._gesture.pointerId);
+          navigator.vibrate?.(40);
           this.onHoldDragStart(this._gestureEvent('holddragstart',
             this._gesture.startX, this._gesture.startY,
             this._gesture.startX, this._gesture.startY,
@@ -107,9 +125,9 @@ export const Gestures = (Base) => class extends Base {
     if (typeof this.onSwipe === 'function') {
       if (isVertical) {
         g.phase = 'cancelled';
-        this.releasePointerCapture(e.pointerId);
         this._gestureRemoveInflight();
       } else {
+        this.setPointerCapture(e.pointerId);
         g.phase = 'swipe';
         if (typeof this.onSwipeMove === 'function') {
           this.onSwipeMove(this._gestureEventDelta('swipemove', g, e.clientX, g.startY, dx, 0));
@@ -118,7 +136,6 @@ export const Gestures = (Base) => class extends Base {
     } else if (typeof this.onHoldDragStart === 'function') {
       if (isVertical) {
         g.phase = 'cancelled';
-        this.releasePointerCapture(e.pointerId);
         this._gestureRemoveInflight();
       }
       // Horizontal during hold-wait — keep tracking, let hold timer run
@@ -236,6 +253,8 @@ Gestures.attach = (element, handlers) => {
   const onDown = (e) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    // Capture immediately — attach() targets structural sub-elements (drag handles,
+    // sliders) that have no interactive children that need to receive click events.
     element.setPointerCapture(e.pointerId);
     gesture = { startX: e.clientX, startY: e.clientY, startTime: Date.now(), phase: 'tracking', originalEvent: e };
     element.addEventListener('pointermove', onMove);
@@ -245,6 +264,7 @@ Gestures.attach = (element, handlers) => {
       longPressTimer = setTimeout(() => {
         if (gesture?.phase === 'tracking') {
           gesture.phase = 'holdDrag';
+          navigator.vibrate?.(40);
           handlers.onHoldDragStart(makeEvent('holddragstart', gesture, gesture.startX, gesture.startY, 0, 0));
         }
       }, LONG_PRESS_DELAY);
@@ -252,6 +272,20 @@ Gestures.attach = (element, handlers) => {
   };
 
   const hasSwipe = !!(handlers.onSwipe || handlers.onSwipeMove);
+  const hasHoldDragHandlers = !!(handlers.onHoldDragStart || handlers.onHoldDrag || handlers.onHoldDragEnd);
+
+  if (hasHoldDragHandlers && !element.hasAttribute('tabindex')) {
+    element.setAttribute('tabindex', '0');
+  }
+
+  let keydownHandler = null;
+  if (hasHoldDragHandlers) {
+    keydownHandler = e => {
+      if (e.key === 'ArrowLeft')  handlers.onHoldDragKey?.('left');
+      if (e.key === 'ArrowRight') handlers.onHoldDragKey?.('right');
+    };
+    element.addEventListener('keydown', keydownHandler);
+  }
 
   const onMove = (e) => {
     if (!gesture) return;
@@ -337,6 +371,7 @@ Gestures.attach = (element, handlers) => {
     clearTimeout(longPressTimer);
     removeInflight();
     element.removeEventListener('pointerdown', onDown);
+    if (keydownHandler) element.removeEventListener('keydown', keydownHandler);
     gesture = null;
   };
 };

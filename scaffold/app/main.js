@@ -5,8 +5,11 @@ import { reducer } from './store/reducer.js';
 import '../_lib/core/router/app-router.js';
 import '../_lib/core/sw-manager/sw-manager.js';
 import '../_lib/core/components/update-banner/update-banner.js';
+%%APP_HEADER_IMPORT%%
+%%MODAL_IMPORT%%
 import './pages/home-page.js';
 import './pages/not-found-page.js';
+%%IMAGES_IMPORT%%
 
 setLocale(getLocale());
 
@@ -17,5 +20,6 @@ console.log('%%APP_NAME%%', __APP_VERSION__);
 const router = document.querySelector('app-router');
 router.routes = [
   { path: '/', component: 'home-page' },
+  %%IMAGES_ROUTE%%
   { path: '*', component: 'not-found-page' },
 ];

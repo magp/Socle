@@ -30,6 +30,9 @@ defineStrings({
   'goal-item.status-failed':     'Goal marked as failed',
   'goal-item.status-restored':   'Goal restored',
 
+  'home.toast-goal-saved':       'Goal saved',
+  'home.toast-goal-deleted':     'Goal deleted',
+
   'year-header.menu':            'Menu',
   'year-header.year-section':    'This year',
   'year-header.app-section':     'App',

@@ -6,32 +6,31 @@ import '../../app/components/goal-dialog/goal-dialog.js';
 HTMLElement.prototype.setPointerCapture    = () => {};
 HTMLElement.prototype.releasePointerCapture = () => {};
 
-// happy-dom does not implement showModal/close; stub them
-function stubDialog(el) {
-  const dialog = el.shadowRoot.querySelector('dialog');
-  dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
-  dialog.close     = vi.fn(() => {
-    dialog.removeAttribute('open');
-    dialog.dispatchEvent(new Event('close'));
+// Stub show/close on the <modal-dialog> shell so tests control dialog lifecycle
+function stubModal(el) {
+  const modal = el.shadowRoot.querySelector('#modal');
+  modal.show  = vi.fn();
+  modal.close = vi.fn(() => {
+    modal.dispatchEvent(new CustomEvent('modal-close', { bubbles: true, composed: true }));
   });
-  return dialog;
+  return modal;
 }
 
 function mount() {
   const el = document.createElement('goal-dialog');
   document.body.appendChild(el);
-  stubDialog(el);
+  stubModal(el);
   return el;
 }
 
 afterEach(() => { document.body.innerHTML = ''; vi.restoreAllMocks(); });
 
 describe('goal-dialog — open', () => {
-  it('calls showModal when open() is invoked', () => {
+  it('calls show() when open() is invoked', () => {
     const el = mount();
-    const dialog = el.shadowRoot.querySelector('dialog');
+    const modal = el.shadowRoot.querySelector('#modal');
     el.open();
-    expect(dialog.showModal).toHaveBeenCalledOnce();
+    expect(modal.show).toHaveBeenCalledOnce();
   });
 
   it('populates input with existing goal title', () => {
@@ -91,13 +90,13 @@ describe('goal-dialog — save', () => {
 
   it('closes the dialog after saving', () => {
     const el = mount();
+    const modal = el.shadowRoot.querySelector('#modal');
     el.open();
-    const dialog = el.shadowRoot.querySelector('dialog');
     const input = el.shadowRoot.querySelector('#input');
     input.value = 'Grand Capstone';
     input.dispatchEvent(new Event('input'));
     el.shadowRoot.querySelector('#save').click();
-    expect(dialog.close).toHaveBeenCalledOnce();
+    expect(modal.close).toHaveBeenCalledOnce();
   });
 
   it('dispatches goal-saved on Enter key in input', () => {
@@ -137,10 +136,10 @@ describe('goal-dialog — delete', () => {
 
   it('closes the dialog after delete', () => {
     const el = mount();
+    const modal = el.shadowRoot.querySelector('#modal');
     el.open({ id: '1', title: 'My goal' });
-    const dialog = el.shadowRoot.querySelector('dialog');
     el.shadowRoot.querySelector('#delete').click();
-    expect(dialog.close).toHaveBeenCalledOnce();
+    expect(modal.close).toHaveBeenCalledOnce();
   });
 });
 

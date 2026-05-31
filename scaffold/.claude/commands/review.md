@@ -25,7 +25,7 @@ Check against project rules:
 - [ ] No silent failures or swallowed errors, especially in store/IDB operations
 - [ ] Web Components: no full re-renders after initial mount (targeted DOM updates only)
 - [ ] Store writes go through `dispatch()` or `setState()` — never directly to IDB
-- [ ] **Safe area insets**: any element with `position: fixed` and `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` — never a flat padding value.
+- [ ] **Safe area insets**: any element with `position: fixed` and `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` — never a flat padding value. Likewise, elements with `position: fixed` and `inset-block-end: 0` (bottom sheets, toasts, nav bars) must use `padding-block-end: calc(var(--space-N) + var(--safe-area-bottom, 0px))`.
 
 ### 3. Maintainability
 

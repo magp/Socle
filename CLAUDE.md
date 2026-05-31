@@ -29,14 +29,18 @@ Socle/
                       # Browser code only: AppElement, Router, Store, IDB, sw.js, styles/
   modules/            # Optional runtime modules → copied to _lib/modules/
     gestures/         # Touch and gesture library
-    p2p/              # WebRTC/WS local network sync (V2)
+    modal-dialog/     # Responsive modal / bottom-sheet component
+    app-header/       # Sticky header component with safe-area support
+    toast/            # toast() function + <toast-manager> service component
+    images/           # compressImage() canvas-based JPEG compression
     sync/             # Export / import / merge
-    ui/               # Optional shared UI components
+    p2p/              # WebRTC/WS local network sync (V2)
   scaffold/           # Template for scaffolded apps — mirrors exact app directory structure
                       # CLI copies this to the app root, substituting %%PLACEHOLDER%% tokens
     app/              # Entry point + empty component dirs
     utils/            # build.js lives here
     tests/unit/ + tests/e2e/
+    _modules/         # Per-module scaffold pages — copied conditionally by CLI at scaffold time
     .github/workflows/deploy.yml
     index.html, manifest.json, package.json, .gitignore, README.md
   cli/
@@ -200,8 +204,13 @@ class MyComponent extends Gestures(AppElement) {
   onHoldDragStart(e)  { /* fires after 500ms hold — begins drag phase */ }
   onHoldDrag(e)       { /* fires on every move during hold-drag */ }
   onHoldDragEnd(e)    { /* fires on pointer up after hold-drag */ }
+  onHoldDragKey(dir)  { /* fires on ArrowLeft/ArrowRight — 'left' or 'right' */ }
 }
 ```
+
+Keyboard parity is automatic: when `onHoldDragKey` is defined, the mixin wires `keydown` Arrow keys with a `composedPath()` guard so only focus on the host element — not a shadow DOM child — triggers the handler. `Gestures.attach` wires the same keys and additionally sets `tabindex="0"` on the target element if it has no existing tabindex.
+
+Haptic feedback (`navigator.vibrate?.(40)`) fires automatically in the library on hold-drag activation (both mixin and `Gestures.attach`). Do not call it from app code — it will double-fire.
 
 **Layer 2 — `Gestures.attach(element, handlers)`** (static method): for gestures on child sub-elements that are not their own Web Components — drag handles, slider thumbs, swipe rows. Returns a cleanup function. Called from `subscribe()`, cleaned up in `unsubscribe()`. Child gestures are independent of host gesture state.
 
@@ -317,6 +326,16 @@ This is the contract between the library and the user project. The update comman
 6. Re-apply the preserved accent colour to the updated `tokens.css`.
 7. Update `lib-version.json` version field.
 
+### Adding and removing modules (CLI commands: `npx socle add` / `npx socle remove`)
+
+`npx socle add <module>` — copies a module from the library source into `_lib/modules/`, updates `lib-version.json`. Validates that the module exists in the library and is not already installed.
+
+`npx socle remove <module>` — scans `app/` for import references to the module before removing; warns and requires explicit confirmation if any are found. Removes `_lib/modules/<module>/`, updates `lib-version.json`.
+
+Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, `toast`.
+
+`npx socle manage` — interactive TUI showing all currently installed modules pre-selected; the developer toggles modules on/off and confirms; adds and removes are applied in batch using the same `addModule`/`removeModule` logic.
+
 ### Core API stability policy
 
 - **Before 1.0:** breaking changes are acceptable with a migration note in the changelog.
@@ -362,11 +381,11 @@ Work in this order. Do not skip ahead.
 6. Gesture library (before any real UI — it will be needed constantly)
 7. Reference app features (yearly goals — YourYear) built on the above
 8. CLI scaffolding tool (extracted from what exists, not designed ahead of it)
-9. Scaffolded app
+9. Scaffolded app ✓ (`modal-dialog`, `app-header`, `toast`, `images` modules; full scaffold home page; CLI `add`/`remove` commands; interactive module selector; `_modules/` per-module scaffold pages)
 10. Simple Library Webpage
 11. Simple store (a state store, not log based)
 12. P2P module (V2)
-13. Components (toast, lists...)**
+13. List components, additional UI primitives
 
 ---
 
@@ -375,7 +394,7 @@ Work in this order. Do not skip ahead.
 The first reference app is a **yearly goals app** named **YourYear**. It exercises every core library feature:
 - Offline-first (works with no connection)
 - Event sourcing (goals are append-only, auditable, correctable)
-- Gestures (hold-drag on a goal bar to adjust progress percentage; keyboard Arrow keys as alternative)
+- Gestures (hold-drag on a goal bar to adjust progress percentage; keyboard Arrow key parity and haptic feedback provided automatically by the gesture library)
 - Update flow (SW update banner)
 - Routing (`/:year` for year overview, `/` redirects to current year, `*` for not-found)
 

@@ -1,8 +1,8 @@
-import { describe, it, expect, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'fs';
+import { describe, it, expect, afterAll, vi } from 'vitest';
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import os from 'os';
-import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib } from './index.js';
+import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports } from './index.js';
 
 // ── unit: replaceTokens ───────────────────────────────────────────────────────
 
@@ -68,6 +68,9 @@ const BASE_OPTIONS = {
   appDescription: 'A test application',
   githubUser: 'testuser',
   includeSync: false,
+  includeAppHeader: false,
+  includeModal: false,
+  includeToast: false,
   accentColor: '#FF0000',
   version: '0.1.0',
 };
@@ -237,5 +240,140 @@ describe('updateLib', () => {
 
     const css = readFileSync(join(dest, '_lib', 'core', 'styles', 'tokens.css'), 'utf8');
     expect(css).toContain('--color-accent: #ABCDEF;');
+  });
+});
+
+// ── unit: findModuleImports ───────────────────────────────────────────────────
+
+describe('findModuleImports', () => {
+  it('returns files that import from the given module', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // includeGestures: true (default) — home-page.js imports gestures
+
+    const matches = findModuleImports(join(dest, 'app'), 'gestures');
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.some(f => f.includes('home-page.js'))).toBe(true);
+  });
+
+  it('returns empty array when no files import from the module', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // sync not included
+
+    expect(findModuleImports(join(dest, 'app'), 'sync')).toEqual([]);
+  });
+
+  it('returns empty array when app dir does not exist', () => {
+    const dest = makeTmpDir();
+    expect(findModuleImports(join(dest, 'app'), 'gestures')).toEqual([]);
+  });
+});
+
+// ── integration: addModule ────────────────────────────────────────────────────
+
+describe('addModule', () => {
+  it('copies module files and updates lib-version.json', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // includeSync: false
+
+    addModule(dest, 'sync');
+
+    expect(existsSync(join(dest, '_lib', 'modules', 'sync', 'sync.js'))).toBe(true);
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules).toContain('sync');
+  });
+
+  it('no-ops and logs when module is already installed', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // gestures included by default
+
+    let logged = '';
+    const orig = console.log;
+    console.log = s => { logged += s + '\n'; };
+    addModule(dest, 'gestures');
+    console.log = orig;
+
+    expect(logged).toContain('already installed');
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules.filter(m => m === 'gestures').length).toBe(1);
+  });
+
+  it('throws on unknown module name', () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+
+    expect(() => addModule(dest, 'unknown-module')).toThrow('Unknown module');
+  });
+
+  it('throws when lib-version.json is missing', () => {
+    const dest = makeTmpDir();
+    expect(() => addModule(dest, 'sync')).toThrow('No _lib/lib-version.json found');
+  });
+});
+
+// ── integration: removeModule ─────────────────────────────────────────────────
+
+describe('removeModule', () => {
+  it('removes module directory and updates lib-version.json', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // gestures: true (default)
+    // Add sync via addModule so no scaffold page imports it in app/
+    addModule(dest, 'sync');
+
+    await removeModule(dest, 'sync', () => Promise.resolve('y'));
+
+    expect(existsSync(join(dest, '_lib', 'modules', 'sync'))).toBe(false);
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules).not.toContain('sync');
+  });
+
+  it('no-ops and logs when module is not installed', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // includeSync: false
+
+    let logged = '';
+    const orig = console.log;
+    console.log = s => { logged += s + '\n'; };
+    await removeModule(dest, 'sync', () => Promise.resolve('y'));
+    console.log = orig;
+
+    expect(logged).toContain('not installed');
+  });
+
+  it('warns about app/ imports and proceeds when user confirms', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // home-page.js imports gestures (includeGestures: true)
+
+    const ask = vi.fn().mockResolvedValue('y');
+    await removeModule(dest, 'gestures', ask);
+
+    expect(ask).toHaveBeenCalled();
+    expect(existsSync(join(dest, '_lib', 'modules', 'gestures'))).toBe(false);
+    const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+    expect(lv.modules).not.toContain('gestures');
+  });
+
+  it('aborts removal when user declines after import warning', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);  // home-page.js imports gestures (includeGestures: true)
+
+    const ask = vi.fn().mockResolvedValue('n');
+    await removeModule(dest, 'gestures', ask);
+
+    expect(ask).toHaveBeenCalled();
+    expect(existsSync(join(dest, '_lib', 'modules', 'gestures'))).toBe(true);
+  });
+
+  it('throws when attempting to remove core', async () => {
+    const dest = makeTmpDir();
+    scaffoldApp(BASE_OPTIONS, dest);
+
+    await expect(removeModule(dest, 'core', () => Promise.resolve('y')))
+      .rejects.toThrow("Cannot remove 'core'");
+  });
+
+  it('throws when lib-version.json is missing', async () => {
+    const dest = makeTmpDir();
+    await expect(removeModule(dest, 'sync', () => Promise.resolve('y')))
+      .rejects.toThrow('No _lib/lib-version.json found');
   });
 });

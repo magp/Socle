@@ -132,7 +132,9 @@ describe('reference-app/package.json matches scaffold/package.json', () => {
     const scaffoldScripts = scaffoldPkg().scripts;
     const refScripts = refPkg().scripts;
     for (const [key, value] of Object.entries(scaffoldScripts)) {
-      expect(refScripts[key], `scripts.${key} missing from reference-app`).toBe(value);
+      // Scaffold scripts contain %%PORT%% token; reference-app uses the resolved default (3000)
+      const resolved = value.replaceAll('%%PORT%%', '3000');
+      expect(refScripts[key], `scripts.${key} missing from reference-app`).toBe(resolved);
     }
   });
 
