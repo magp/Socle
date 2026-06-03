@@ -94,6 +94,34 @@ It provides two actions:
 
 `<update-banner>` is a fixed-position element anchored to the top of the viewport. It uses `--color-action-dark` as its background and respects `--safe-area-top` for devices with notches.
 
+### `--update-banner-height` and layout integration
+
+Because `<update-banner>` is `position: fixed`, it sits outside normal document flow and would overlap content beneath it. To prevent this, the banner sets a CSS custom property on `documentElement` when it becomes visible:
+
+```css
+/* set by update-banner on show */
+--update-banner-height: 44px; /* actual offsetHeight, varies on notched devices */
+
+/* removed on dismiss */
+```
+
+Layout components that need to sit below the banner consume this property:
+
+```css
+/* app-header — sticky header */
+:host {
+  position: sticky;
+  inset-block-start: var(--update-banner-height, 0px);  /* sticky threshold */
+  margin-block-start: var(--update-banner-height, 0px); /* flow position */
+}
+```
+
+When the banner is hidden the property is absent, both values resolve to `0px`, and the layout is identical to having no banner at all.
+
+The property is set inside a `requestAnimationFrame` callback after the banner becomes visible, so `offsetHeight` reflects the rendered height (including `--safe-area-top` padding on notched devices). This ensures the shift is accurate even when the safe area changes the banner's actual height.
+
+**If you add a sticky or fixed element that should sit below the update banner**, apply the same two declarations to its host element.
+
 ---
 
 ## Ephemeral state and `setState`

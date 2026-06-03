@@ -2,7 +2,7 @@
    DESIGN TOKENS
    Source of truth for all visual values.
    No component ever hardcodes a value that exists here.
-   Apps override --color-accent and --color-accent-* only.
+   Apps override --color-accent and --color-accent-* to retheme.
    ============================================================ */
 
 :root {
@@ -32,11 +32,12 @@
   --color-accent:          #E8824A;
   --color-accent-light:    #FDF0E8;   /* tinted backgrounds, badges */
   --color-accent-dark:     #C4622E;   /* pressed states */
+  --color-accent-subtle:   rgba(232, 130, 74, 0.10); /* hover and selected surfaces */
 
   /* ----------------------------------------------------------
      COLOUR — Semantic
      ---------------------------------------------------------- */
-  --color-success:         #3D9A6E;
+  --color-success:         #317B58;   /* darkened for 5.1:1 on white (WCAG AA) */
   --color-success-light:   #E8F5EE;
   --color-warning:         #E8A020;
   --color-warning-light:   #FDF4E0;
@@ -57,15 +58,15 @@
 
   /* ----------------------------------------------------------
      TYPOGRAPHY
-     System font stack — fast, legible, native feel on mobile.
+     Onest — humanist grotesque, low-DPI screen optimised, ~16KB variable Latin.
+     Fallback to Helvetica Neue (close metrics) then Arial.
      ---------------------------------------------------------- */
-  --font-family:           -apple-system, BlinkMacSystemFont,
-                           'Segoe UI', sans-serif;
+  --font-family:           'Onest', 'Helvetica Neue', Arial, sans-serif;
 
   --font-size-micro:       0.6875rem;  /* 11px — labels, badges */
   --font-size-caption:     0.8125rem;  /* 13px — secondary info */
   --font-size-body:        1rem;       /* 16px — default */
-  --font-size-subheading:  1.0625rem;  /* 17px — list titles */
+  --font-size-subheading:  1.125rem;   /* 18px — list titles */
   --font-size-heading:     1.375rem;   /* 22px — section headers */
   --font-size-title:       1.75rem;    /* 28px — page titles */
   --font-size-display:     2.5rem;     /* 40px — hero data values */

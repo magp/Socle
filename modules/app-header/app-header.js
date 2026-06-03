@@ -7,7 +7,10 @@ class AppHeader extends AppElement {
         :host {
           display: block;
           position: sticky;
-          inset-block-start: 0;
+          /* update-banner is position:fixed — this shifts the sticky threshold
+             and the element's own flow position below the banner when visible */
+          inset-block-start: var(--update-banner-height, 0px);
+          margin-block-start: var(--update-banner-height, 0px);
           z-index: 100;
           background: var(--color-bg);
           border-block-end: 1px solid var(--color-border);
@@ -19,11 +22,12 @@ class AppHeader extends AppElement {
           justify-content: space-between;
           padding-block: var(--space-3);
           padding-inline: var(--space-4);
-          min-block-size: 44px;
+          min-block-size: var(--touch-target);
         }
         .title {
           font-size: var(--font-size-heading);
           font-weight: var(--font-weight-bold);
+          margin-block: 0;
           flex: 1;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -37,7 +41,7 @@ class AppHeader extends AppElement {
         }
       </style>
       <header class="inner">
-        <span class="title"><slot></slot></span>
+        <h1 class="title"><slot></slot></h1>
         <div class="action"><slot name="action"></slot></div>
       </header>
     `;

@@ -151,6 +151,12 @@ class GoalItem extends Gestures(AppElement) {
           animation: peek-hint 350ms var(--peek-delay, 0ms) ease-out both;
         }
 
+        @media (prefers-reduced-motion: reduce) {
+          .fill.celebrate { animation: none; }
+          :host(.celebrating) { animation: none; }
+          :host(.peek-hint) .bar { animation: none; }
+        }
+
         .sr-only {
           position: absolute;
           inline-size: 1px;

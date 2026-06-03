@@ -49,6 +49,11 @@ const REQUIRED = [
   ['app/pages/home-page.js',  '%%HP_GESTURE_UNSUBSCRIBE%%'],
   ['app/pages/home-page.js',  '%%HP_SYNC_SUBSCRIBE%%'],
   ['app/pages/home-page.js',  '%%HP_SYNC_UNSUBSCRIBE%%'],
+  ['app/pages/home-page.js',  '%%HP_IMAGES_IMPORT%%'],
+  ['app/pages/home-page.js',  '%%HP_IMAGES_CSS%%'],
+  ['app/pages/home-page.js',  '%%HP_IMAGES_SECTION%%'],
+  ['app/pages/home-page.js',  '%%HP_IMAGES_SUBSCRIBE%%'],
+  ['app/pages/home-page.js',  '%%HP_IMAGES_UNSUBSCRIBE%%'],
 ];
 
 describe('scaffold %%TOKEN%% completeness', () => {

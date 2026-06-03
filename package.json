@@ -1,6 +1,6 @@
 {
   "name": "socle",
-  "version": "0.2.0",
+  "version": "0.2.5",
   "type": "module",
   "bin": {
     "socle": "./cli/index.js"
@@ -16,6 +16,6 @@
     "@playwright/test": "^1.52.0",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.9.0",
-    "vitest": "^3.2.0"
+    "vitest": "^4.1.0"
   }
 }

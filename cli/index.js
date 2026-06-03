@@ -130,7 +130,7 @@ function buildTokenMap(options) {
   ].join('\n') : '';
 
   const HP_MODAL_BTN = includeModal
-    ? "            <button class=\"secondary\" id=\"modal-btn\">Info</button>"
+    ? "            <button class=\"secondary\" id=\"modal-btn\">Info modal</button>"
     : '';
 
   const HP_MODAL_ELEMENT = includeModal ? [
@@ -239,6 +239,69 @@ function buildTokenMap(options) {
     "    sr.querySelector('#sync-file-input')?.removeEventListener('change', this._onFileChange);",
   ].join('\n') : '';
 
+  const HP_IMAGES_IMPORT = includeImages
+    ? "import { compressImage } from '../../_lib/modules/images/images.js';"
+    : '';
+
+  const HP_IMAGES_CSS = includeImages ? [
+    '        .img-preview {',
+    '          border-radius: var(--radius-md);',
+    '          overflow: hidden;',
+    '          background: var(--color-surface-raised);',
+    '          min-block-size: 120px;',
+    '          display: flex;',
+    '          align-items: center;',
+    '          justify-content: center;',
+    '          color: var(--color-text-secondary);',
+    '          font-size: var(--font-size-caption);',
+    '        }',
+    '        .img-preview img { max-inline-size: 100%; display: block; }',
+    '        .img-meta { font-size: var(--font-size-caption); color: var(--color-text-secondary); }',
+  ].join('\n') : '';
+
+  const HP_IMAGES_SECTION = includeImages ? [
+    '',
+    '        <section class="card">',
+    '          <h2>Images</h2>',
+    '          <p>Pick an image to compress and store it locally.</p>',
+    '          <div class="img-preview" id="img-preview">No image yet</div>',
+    '          <p class="img-meta" id="img-meta" hidden></p>',
+    '          <div class="actions">',
+    '            <button class="secondary" id="img-pick-btn">Pick image</button>',
+    '          </div>',
+    '          <input type="file" accept="image/*" id="img-file-input" hidden />',
+    '        </section>',
+  ].join('\n') : '';
+
+  const imgToastCall = includeToast ? "\n      toast('Image saved', 'success');" : '';
+  const HP_IMAGES_SUBSCRIBE = includeImages ? [
+    "    this._onImgPick = () => sr.querySelector('#img-file-input').click();",
+    '    this._onImgFile = async e => {',
+    '      const file = e.target.files[0];',
+    '      if (!file) return;',
+    '      const blob = await compressImage(file, { maxWidth: 1200, quality: 0.8 });',
+    '      const id   = crypto.randomUUID();',
+    '      await Store.attachBlob(id, blob);',
+    '      const url     = URL.createObjectURL(blob);',
+    "      const preview = sr.querySelector('#img-preview');",
+    "      const img = document.createElement('img');",
+    "      img.src = url; img.alt = 'Compressed image';",
+    "      preview.textContent = '';",
+    "      preview.appendChild(img);",
+    "      sr.querySelector('#img-meta').hidden = false;",
+    "      sr.querySelector('#img-meta').textContent = Math.round(blob.size / 1024) + ' KB';" + imgToastCall,
+    "      e.target.value = '';",
+    '    };',
+    "    sr.querySelector('#img-pick-btn').addEventListener('click', this._onImgPick);",
+    "    sr.querySelector('#img-file-input').addEventListener('change', this._onImgFile);",
+    '',
+  ].join('\n') : '';
+
+  const HP_IMAGES_UNSUBSCRIBE = includeImages ? [
+    "    sr.querySelector('#img-pick-btn')?.removeEventListener('click', this._onImgPick);",
+    "    sr.querySelector('#img-file-input')?.removeEventListener('change', this._onImgFile);",
+  ].join('\n') : '';
+
   const APP_HEADER_IMPORT = includeAppHeader
     ? "import '../_lib/modules/app-header/app-header.js';"
     : '';
@@ -267,6 +330,11 @@ function buildTokenMap(options) {
     HP_GESTURE_UNSUBSCRIBE,
     HP_SYNC_SUBSCRIBE,
     HP_SYNC_UNSUBSCRIBE,
+    HP_IMAGES_IMPORT,
+    HP_IMAGES_CSS,
+    HP_IMAGES_SECTION,
+    HP_IMAGES_SUBSCRIBE,
+    HP_IMAGES_UNSUBSCRIBE,
     APP_HEADER_IMPORT,
     MODAL_IMPORT,
     APP_HEADER_ELEMENT,

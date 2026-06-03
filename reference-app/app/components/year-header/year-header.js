@@ -29,6 +29,11 @@ class YearHeader extends Gestures(AppElement) {
           to   { opacity: 1; }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+          .menu-sheet { animation: none; }
+          .header-img { animation: none; }
+        }
+
         :host {
           display: block;
           position: fixed;
@@ -39,7 +44,6 @@ class YearHeader extends Gestures(AppElement) {
           padding-block-start: calc(var(--space-2) + var(--safe-area-top));
           padding-block-end: 0;
           padding-inline: var(--page-padding);
-          transition: padding-block-start 0.2s ease, block-size 0.2s ease;
           --image-overlay-edge: rgba(0,0,0,0.65);
           --image-strip-bg:     rgba(255,255,255,0.2);
           --image-strip-fill:   rgba(255,255,255,0.6);
@@ -656,8 +660,10 @@ class YearHeader extends Gestures(AppElement) {
       this._clearImage();
       return;
     }
+    this.setAttribute('data-has-image', '');
+    document.documentElement.style.setProperty('--year-header-height', IMAGE_HEADER_HEIGHT);
     const blob = await Store.getBlob(imageId);
-    if (this._year !== year) return; // year changed while fetching
+    if (this._year !== year) return;
     if (!blob) {
       this._clearImage();
       return;
@@ -665,8 +671,6 @@ class YearHeader extends Gestures(AppElement) {
     if (this._imageUrl) URL.revokeObjectURL(this._imageUrl);
     this._imageUrl = URL.createObjectURL(blob);
     this.shadowRoot.querySelector('#header-img').src = this._imageUrl;
-    this.setAttribute('data-has-image', '');
-    document.documentElement.style.setProperty('--year-header-height', IMAGE_HEADER_HEIGHT);
     this._updatePhotoMenu(true);
   }
 

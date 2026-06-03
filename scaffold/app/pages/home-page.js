@@ -1,5 +1,6 @@
 %%HP_TOAST_IMPORT%%
 %%HP_GESTURE_IMPORT%%
+%%HP_IMAGES_IMPORT%%
 import { AppElement } from '../../_lib/core/app-element.js';
 import * as Store from '../../_lib/core/store/store.js';
 
@@ -20,17 +21,28 @@ class HomePage extends AppElement {
         .card {
           background: var(--color-surface);
           border-radius: var(--radius-lg);
-          padding: var(--space-4);
+          padding-block-start: var(--space-1);
+          padding-block-end: var(--space-4);
+          padding-inline: var(--space-4);
           display: flex;
           flex-direction: column;
-          gap: var(--space-3);
+          box-shadow: var(--shadow-card);
         }
         h2 {
-          font-size: var(--font-size-heading);
+          font-size: var(--font-size-subheading);
           font-weight: var(--font-weight-bold);
-          margin-block-end: var(--space-1);
+          padding-block-end: var(--space-2);
+          border-block-end: 0.5px solid var(--color-border);
+          margin-block-start: 0.5em;
+          margin-block-end: 0.5em;
         }
-        p { font-size: var(--font-size-body); color: var(--color-text-secondary); }
+        p { font-size: var(--font-size-body); color: var(--color-text-secondary); margin-block: 0; }
+        .card label,
+        .card fieldset,
+        .card div,
+        .card p { margin-block-end: 0.6em; }
+        .card fieldset { margin-block-start: 0.5em; }
+        .card fieldset label { margin-block-end: 0; }
         label {
           display: flex;
           flex-direction: column;
@@ -48,26 +60,58 @@ class HomePage extends AppElement {
           inline-size: 100%;
         }
         textarea { block-size: 80px; resize: vertical; }
+        input[type="text"]:hover, textarea:hover {
+          border-color: var(--color-accent);
+          transition: border-color 0.15s;
+        }
+        input[type="text"]:focus, textarea:focus {
+          border-color: var(--color-accent);
+          background: var(--color-accent-subtle);
+          outline: none;
+        }
         fieldset {
-          border: 1px solid var(--color-border);
-          border-radius: var(--radius-md);
-          padding: var(--space-2) var(--space-3);
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-2);
-        }
-        legend {
-          font-size: var(--font-size-caption);
-          font-weight: var(--font-weight-bold);
-          padding-inline: var(--space-1);
-        }
-        .radio-label {
+          border: none;
+          border-radius: var(--radius-full);
+          padding: var(--space-1);
+          background: var(--color-accent-subtle);
           display: flex;
           flex-direction: row;
-          align-items: center;
-          gap: var(--space-2);
-          min-block-size: var(--touch-target);
+          gap: var(--space-1);
+        }
+        legend {
+          position: absolute;
+          inline-size: 1px;
+          block-size: 1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+        }
+        .radio-label {
+          flex: 1;
+          block-size: var(--touch-target);
+          min-block-size: unset;
+          border-radius: var(--radius-full);
+          background: transparent;
+          font-size: var(--font-size-caption);
+          font-weight: var(--font-weight-medium);
+          color: var(--color-text-secondary);
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+        .radio-label input[type="radio"] {
+          position: absolute;
+          opacity: 0;
+          inline-size: 1px;
+          block-size: 1px;
+          pointer-events: none;
+        }
+        .radio-label:has(input:checked) {
+          background: var(--color-surface);
+          color: var(--color-text-primary);
+          font-weight: var(--font-weight-bold);
+          box-shadow: var(--shadow-card);
         }
         .toggle-label {
           display: flex;
@@ -124,7 +168,7 @@ class HomePage extends AppElement {
           cursor: pointer;
           border-block-end: 2px solid transparent;
           margin-block-end: -2px;
-          min-block-size: 44px;
+          min-block-size: var(--touch-target);
         }
         .tabs button[aria-selected="true"] {
           color: var(--color-text-primary);
@@ -150,9 +194,11 @@ class HomePage extends AppElement {
           font-size: var(--font-size-body);
           font-family: var(--font-family);
           font-weight: var(--font-weight-bold);
-          min-block-size: 44px;
+          min-block-size: var(--touch-target);
           cursor: pointer;
+          transition: background 0.15s;
         }
+        button.primary:hover { background: var(--color-accent-dark); }
         button.secondary {
           background: var(--color-surface);
           color: var(--color-text-primary);
@@ -161,10 +207,16 @@ class HomePage extends AppElement {
           padding: var(--space-2) var(--space-4);
           font-size: var(--font-size-body);
           font-family: var(--font-family);
-          min-block-size: 44px;
+          min-block-size: var(--touch-target);
           cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+        }
+        button.secondary:hover {
+          background: var(--color-accent-subtle);
+          border-color: var(--color-accent);
         }
 %%HP_GESTURE_CSS%%
+%%HP_IMAGES_CSS%%
       </style>
       <main>
         <section class="card">
@@ -216,9 +268,10 @@ class HomePage extends AppElement {
 %%HP_MODAL_BTN%%
           </div>
         </section>
-%%HP_MODAL_ELEMENT%%
 %%HP_GESTURE_SECTION%%
 %%HP_SYNC_SECTION%%
+%%HP_IMAGES_SECTION%%
+%%HP_MODAL_ELEMENT%%
       </main>
     `;
   }
@@ -236,6 +289,7 @@ class HomePage extends AppElement {
 %%HP_MODAL_SUBSCRIBE%%
 %%HP_GESTURE_SUBSCRIBE%%
 %%HP_SYNC_SUBSCRIBE%%
+%%HP_IMAGES_SUBSCRIBE%%
     this._tabs   = [...sr.querySelectorAll('[role="tab"]')];
     this._panels = [...sr.querySelectorAll('[role="tabpanel"]')];
     this._onTab  = e => {
@@ -252,6 +306,7 @@ class HomePage extends AppElement {
 %%HP_MODAL_UNSUBSCRIBE%%
 %%HP_GESTURE_UNSUBSCRIBE%%
 %%HP_SYNC_UNSUBSCRIBE%%
+%%HP_IMAGES_UNSUBSCRIBE%%
     this._tabs?.forEach(t => t.removeEventListener('click', this._onTab));
   }
 }

@@ -26,7 +26,7 @@ describe('compressImage', () => {
     const bitmap = makeMockBitmap(800, 600);
     const canvas = makeCanvas(800, 600);
     vi.mocked(createImageBitmap).mockResolvedValue(bitmap);
-    vi.mocked(OffscreenCanvas).mockImplementation((w, h) => makeCanvas(w, h));
+    vi.mocked(OffscreenCanvas).mockImplementation(function(w, h) { return makeCanvas(w, h); });
 
     const file = new File([''], 'photo.jpg', { type: 'image/jpeg' });
     const result = await compressImage(file);
@@ -37,7 +37,7 @@ describe('compressImage', () => {
     const bitmap = makeMockBitmap(2400, 1800);
     let capturedW, capturedH;
     vi.mocked(createImageBitmap).mockResolvedValue(bitmap);
-    vi.mocked(OffscreenCanvas).mockImplementation((w, h) => {
+    vi.mocked(OffscreenCanvas).mockImplementation(function(w, h) {
       capturedW = w; capturedH = h;
       return makeCanvas(w, h);
     });
@@ -52,7 +52,7 @@ describe('compressImage', () => {
     const bitmap = makeMockBitmap(600, 400);
     let capturedW;
     vi.mocked(createImageBitmap).mockResolvedValue(bitmap);
-    vi.mocked(OffscreenCanvas).mockImplementation((w, h) => {
+    vi.mocked(OffscreenCanvas).mockImplementation(function(w, h) {
       capturedW = w;
       return makeCanvas(w, h);
     });
@@ -65,7 +65,7 @@ describe('compressImage', () => {
   it('closes the bitmap after use', async () => {
     const bitmap = makeMockBitmap(400, 300);
     vi.mocked(createImageBitmap).mockResolvedValue(bitmap);
-    vi.mocked(OffscreenCanvas).mockImplementation((w, h) => makeCanvas(w, h));
+    vi.mocked(OffscreenCanvas).mockImplementation(function(w, h) { return makeCanvas(w, h); });
 
     const file = new File([''], 'x.jpg', { type: 'image/jpeg' });
     await compressImage(file);

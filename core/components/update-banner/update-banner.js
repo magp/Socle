@@ -22,13 +22,18 @@ class UpdateBanner extends AppElement {
           font-family: var(--font-family);
           animation: slide-down 0.25s ease-out;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+          :host { animation: none; }
+        }
         :host([hidden]) { display: none; }
 
         .bar {
           display: flex;
           align-items: center;
           gap: var(--space-3);
-          padding-block: var(--space-2);
+          padding-block-start: calc(var(--space-2) + var(--safe-area-top));
+          padding-block-end: var(--space-2);
           padding-inline: var(--page-padding);
         }
 
@@ -53,9 +58,15 @@ class UpdateBanner extends AppElement {
           font-size: var(--font-size-caption);
           font-weight: var(--font-weight-semibold);
           padding-block: var(--space-1);
+          min-block-size: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        button:focus-visible {
+          outline: 2px solid var(--color-accent);
+          outline-offset: 2px;
         }
 
         #reload {

@@ -32,7 +32,7 @@ class HomePage extends AppElement {
         .section-heading {
           font-size: var(--font-size-caption);
           font-weight: var(--font-weight-semibold);
-          color: var(--color-text-muted);
+          color: var(--color-accent);
           text-transform: uppercase;
           letter-spacing: 0.08em;
         }
@@ -47,7 +47,7 @@ class HomePage extends AppElement {
         .edit-btn {
           font-size: var(--font-size-caption);
           font-weight: var(--font-weight-semibold);
-          color: var(--color-accent);
+          color: var(--color-text-muted);
           background: none;
           border: none;
           cursor: pointer;

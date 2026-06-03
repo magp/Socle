@@ -30,7 +30,7 @@ Socle/
   modules/            # Optional runtime modules → copied to _lib/modules/
     gestures/         # Touch and gesture library
     modal-dialog/     # Responsive modal / bottom-sheet component
-    app-header/       # Sticky header component with safe-area support
+    app-header/       # Sticky header with safe-area support and --update-banner-height integration
     toast/            # toast() function + <toast-manager> service component
     images/           # compressImage() canvas-based JPEG compression
     sync/             # Export / import / merge
@@ -127,6 +127,7 @@ All components extend `AppElement extends HTMLElement`. It provides:
 - A `navigate(path)` helper calls `history.pushState` and dispatches a navigation event.
 - Links never cause full page loads.
 - **Route matching is segment-count sensitive.** A dynamic segment like `/:year` matches any single-segment path — `/anything` matches as `year='anything'`. Only paths with a different number of segments (e.g. `/foo/bar`) fall through to the `*` wildcard. E2E tests for the not-found route must use multi-segment paths, not single-segment unknowns.
+- **Page entry animation:** `<app-router>` adds a `.enter` class to each newly mounted page element. The class triggers a `_routerFadeIn` keyframe (opacity 0→1) using `--duration-normal` and `--ease-out` tokens, defined on the router's adopted stylesheet. Page components do not need to define their own entry animation.
 
 ### Store
 
@@ -185,7 +186,7 @@ Two-layer system:
 1. **SW waiting detection (runtime):** `navigator.serviceWorker.register()` → check for already-`waiting` SW or watch `updatefound` → show update banner → on user tap, `postMessage({ type: 'SKIP_WAITING' })` → SW calls `skipWaiting()` → `controllerchange` fires → `location.reload()`. Never auto-apply `skipWaiting`. Guard: `controllerchange` also fires on first install when the SW calls `clients.claim()`. Only reload when a previous controller existed — capture `navigator.serviceWorker.controller` before registering and check it in the handler.
 2. **version.json (informational):** Fetched on boot, compared to embedded `APP_VERSION`. Shows "update available" immediately, before any SW update check completes.
 
-A `<sw-manager>` service component owns both layers. An `<update-banner>` UI component subscribes to the relevant store key.
+A `<sw-manager>` service component owns both layers. An `<update-banner>` UI component subscribes to the relevant store key. When visible, `<update-banner>` sets `--update-banner-height` on `documentElement` (inside a `requestAnimationFrame` so the value reflects the rendered height, including safe-area padding on notched devices), and removes it on dismiss. Sticky and fixed layout elements that must sit below the banner consume this variable — `modules/app-header/app-header.js` is the canonical example: it applies `inset-block-start: var(--update-banner-height, 0px)` (sticky threshold) and `margin-block-start: var(--update-banner-height, 0px)` (flow position), both defaulting to `0px` when no banner is present.
 
 Update checks happen at boot and via the browser's 24h background sweep. With SPA routing, navigation events don't trigger SW update checks — this is acceptable for the long session use cases (competition days) where updates apply between sessions, not during them.
 
@@ -364,6 +365,7 @@ Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, 
 - **Every key feature has a test before the feature is considered done.** Not full TDD, but no unfinished feature without coverage.
 - **Fail loudly.** Silent failures and fallbacks that hide errors are not acceptable, especially in the data layer.
 - **Fixed-position components must account for safe area insets.** Any element using `position: fixed` with `inset-block-start: 0` must use `padding-block-start: calc(var(--space-N) + var(--safe-area-top))` to avoid overlapping device notches or dynamic islands. `--safe-area-top` resolves to `0px` on flat screens — zero cost.
+- **`prefers-reduced-motion` in shadow DOM:** `animations.css` suppresses transitions globally but cannot reach `@keyframes` defined inside a shadow root. Any component that defines its own `@keyframes` inline (slide-up, fade-in, etc.) must include a `@media (prefers-reduced-motion: reduce)` block disabling them. This is the correct pattern — not a bypass of the global file.
 - **`[hidden]` must always win in shadow DOM.** Component CSS using `display: flex` or similar on list items will silently override the UA `[hidden] { display: none }` inside a shadow root. `core/styles/base.js` includes `[hidden] { display: none !important; }` which every shadow root inherits via `adoptedStyleSheets`. Never override `[hidden]` in component CSS.
 - **Solve real problems, not imagined ones.** Do not add configuration or fallback behaviour for problems that have not been observed in practice.
 

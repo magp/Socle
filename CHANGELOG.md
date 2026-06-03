@@ -9,6 +9,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `core/router/app-router.js` — page entry fade-in: `<app-router>` adds a `.enter` class to every newly mounted page element; the class triggers a `_routerFadeIn` keyframe (opacity 0→1) using `--duration-normal` and `--ease-out` tokens via an adopted stylesheet on the router shadow root
+- `core/styles/tokens.css` — `--color-accent-subtle: rgba(232, 130, 74, 0.10)` added for hover and selected surface tints; `--font-family` changed from system stack to `'Onest', 'Helvetica Neue', Arial, sans-serif` (humanist grotesque, variable Latin, ~16 KB, optimised for low-DPI mobile); `--font-size-subheading` bumped from 17px to 18px
+- `reference-app/index.html`, `scaffold/index.html` — Google Fonts `<link>` for Onest variable font (`wght@100..900`); body gains a subtle radial gradient (`rgba(232,130,74,0.06)` at top centre) and an SVG noise texture overlay at 4% opacity for depth
+- `library_tests/scaffold-tokens.test.js` — HP_IMAGES_IMPORT, HP_IMAGES_CSS, HP_IMAGES_SECTION, HP_IMAGES_SUBSCRIBE, HP_IMAGES_UNSUBSCRIBE tokens added to the required-placeholder list
+- `core/components/update-banner/update-banner.test.js` — two new tests: `--update-banner-height` is set on `documentElement` when the banner is shown; it is removed when dismiss is clicked. `requestAnimationFrame` is stubbed synchronously in `beforeEach` so height updates are asserted in the same tick
+- `modules/app-header/app-header.test.js` — extended coverage: title renders inside `<h1>`, slot is inside `<h1>`, `margin-block: 0` present in styles, named `action` slot present, `padding-block-start` uses `--safe-area-top`
+- `docs/sw-update-flow.md` — `--update-banner-height` layout integration section: documents when the property is set/removed, how app-header consumes it, and the pattern for any future sticky/fixed component that must sit below the update banner
+
+### Changed
+- `modules/toast/toast.js` — restyled as pill toasts: `--radius-full` border-radius, elevated shadow, `--font-weight-medium`; info toast uses `--color-action-dark` dark background with `--color-on-dark` text; `prefers-reduced-motion` block added
+- `reference-app/app/pages/home-page.js` — section heading colour swapped to `--color-accent` (was `--color-text-muted`); edit button colour swapped to `--color-text-muted` (was `--color-accent`) for better visual hierarchy
+- `reference-app/package.json`, `scaffold/package.json` — vitest upgraded from `^3.2.0` to `^4.1.0`
+
 - `modules/modal-dialog/` — `<modal-dialog>` responsive component: renders as a bottom sheet on mobile (≤600px) with slide-up animation and a handle pill; renders as a centered card on desktop with fade-in; `show()` / `close()` API; `modal-close` event (`bubbles`, `composed`); default and footer slots; `_justOpened` guard prevents gesture-triggered opens from immediately dismissing via backdrop click; `aria-modal="true"`, `aria-label` forwarding from host attribute to inner `<dialog>`, `aria-hidden="true"` on decorative handle
 - `modules/app-header/` — `<app-header>` component: sticky header with default (title) and `action` slot for right-side controls; `padding-block-start` accounts for `--safe-area-top` so it clears device notches and dynamic islands
 - `modules/toast/` — `toast(message, type)` function: creates temporary DOM notifications (`info`, `success`, `error`); auto-dismisses after 3 s; fixed container with safe-area-bottom padding; container created once and reused; `<toast-manager>` service component subscribes to `_toast` store state and renders toasts
@@ -30,6 +43,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - CLI module selection — gestures is now an opt-in choice at scaffold time (was always included); sequential y/N prompts replaced with interactive `multiSelect` terminal UI
 
 ### Fixed
+- `reference-app/app/components/year-header/year-header.js` — image flash on navigation: `data-has-image` attribute and `--year-header-height` CSS variable are now set synchronously before `await Store.getBlob()`, so layout reserves image-mode space immediately; the stale-year guard (`this._year !== year`) remains sufficient for race conditions; also added `prefers-reduced-motion` blocks for `menu-sheet` and `header-img` animations; removed `:host` CSS transition that was re-triggering on every compact/expand state change
+- `reference-app/app/components/goal-item/goal-item.js` — `prefers-reduced-motion` blocks added suppressing celebrate, celebrating, and peek-hint animations
+- `cli/index.js` — HP_IMAGES_IMPORT, HP_IMAGES_CSS, HP_IMAGES_SECTION, HP_IMAGES_SUBSCRIBE, HP_IMAGES_UNSUBSCRIBE tokens were absent from `buildTokenMap`, causing the images section to be silently omitted from scaffolded home pages when the images module was selected
+- `core/components/update-banner/update-banner.js` — added `button:focus-visible` outline; `prefers-reduced-motion` block added for the slide-down animation
+- `core/styles/tokens.css` — `--color-success` darkened from `#3D9A6E` to `#317B58`; the previous value gave ~3.2:1 on white (WCAG AA requires 4.5:1 for body text); new value achieves 5.1:1
+- `core/components/update-banner/update-banner.js` — restored `position: fixed` so the banner anchors to the viewport and the `translateY(-100%)` slide-in animation works correctly; the surrounding layout system (`--update-banner-height` on `documentElement`) already assumes fixed positioning
+- `core/components/update-banner/update-banner.js` — applied safe-area inset correctly: `padding-block-start: calc(var(--space-2) + var(--safe-area-top))` so the banner clears device notches and its reported `offsetHeight` (used for `--update-banner-height`) is accurate on notched devices
+- `core/components/update-banner/update-banner.js` — banner action buttons reduced to `min-block-size: 32px`; compact notification bar context warrants a deliberate below-40px exception
+- `modules/app-header/app-header.js` — `<span class="title">` changed to `<h1 class="title">` with `margin-block: 0` to suppress UA default heading margins that don't receive the global `* { margin: 0 }` reset inside shadow DOM
+- `modules/app-header/app-header.js` — `--update-banner-height` coupling: added `margin-block-start: var(--update-banner-height, 0px)` (pushes header below fixed banner in document flow) and `inset-block-start: var(--update-banner-height, 0px)` (aligns sticky threshold to match); both default to `0px` when banner is absent
+- `modules/app-header/app-header.js` — `min-block-size: 44px` (magic number) replaced with `var(--touch-target)`
+- `scaffold/app/pages/home-page.js` — `legend` and hidden radio inputs changed from physical `width: 1px; height: 1px` to logical `inline-size: 1px; block-size: 1px`; three `min-block-size: 44px` hardcoded values replaced with `var(--touch-target)`
+- `modules/images/images.test.js` — constructor `mockImplementation` calls changed from arrow functions to regular functions; Vitest v4 invokes constructor mocks via `new impl(args)` which fails with arrow functions
 - `modules/toast/toast.js` — success toast text colour changed from `--color-text-inverse` to `--color-text-primary`; `--color-text-inverse` (white) on `--color-success` (#3D9A6E) gives ~3.43:1, which fails WCAG AA for body text
 
 ### Added

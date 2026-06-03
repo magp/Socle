@@ -6,6 +6,8 @@ import { defineStrings, reset as resetStrings } from '../../strings.js';
 const reducer = s => s ?? {};
 
 beforeEach(async () => {
+  // Fire rAF synchronously so --update-banner-height is set in the same tick.
+  vi.stubGlobal('requestAnimationFrame', fn => fn());
   resetStore();
   resetStrings();
   defineStrings({
@@ -19,6 +21,8 @@ beforeEach(async () => {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  document.documentElement.style.removeProperty('--update-banner-height');
+  vi.unstubAllGlobals();
 });
 
 function mount() {
@@ -53,6 +57,19 @@ describe('update-banner', () => {
     expect(el.shadowRoot.querySelector('span').textContent).toBe('Update available');
     expect(el.shadowRoot.querySelector('#reload').textContent).toBe('Reload');
     expect(el.shadowRoot.querySelector('#dismiss').getAttribute('aria-label')).toBe('Dismiss');
+  });
+
+  it('sets --update-banner-height on documentElement when shown', () => {
+    const el = mount();
+    setState('updateAvailable', true);
+    expect(document.documentElement.style.getPropertyValue('--update-banner-height')).not.toBe('');
+  });
+
+  it('dismiss removes --update-banner-height from documentElement', () => {
+    const el = mount();
+    setState('updateAvailable', true);
+    el.shadowRoot.querySelector('#dismiss').click();
+    expect(document.documentElement.style.getPropertyValue('--update-banner-height')).toBe('');
   });
 
   it('dismiss button hides the banner without reloading', () => {
