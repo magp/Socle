@@ -4,6 +4,37 @@
 
 A highly opinionated PWA library for personal projects. It is a **code generator and pattern library**, not a runtime dependency. The CLI scaffolds a new project by copying relevant modules directly into the user's codebase into a `_lib/` directory. Users own the generated project but the `_lib/` layer has a clear ownership boundary that enables library updates without touching developer code. There is no `node_modules` from this library at runtime.
 
+## Quick Commands
+
+**Library tests — run from monorepo root:**
+```bash
+npx vitest run core modules cli library_tests   # all library tests
+npx vitest run path/to/file.test.js             # single file
+```
+
+**Reference app tests — run from `reference-app/`:**
+```bash
+npm run test:unit    # unit tests
+npm run test:e2e     # Playwright E2E
+npx playwright test --ui   # interactive Playwright runner
+```
+
+**Reference app dev server — run from `reference-app/`:**
+```bash
+npm run dev:https    # always use this — HTTPS required for SW and mobile testing
+```
+
+**CLI — interactive, run by scaffolded app developers:**
+```
+npx socle scaffold   # create a new app
+npx socle add / remove / manage   # manage modules in a scaffolded app
+npx socle update     # update _lib/ to latest library version
+```
+
+For architecture rationale, V2/V3/V4 roadmap, and extended module docs: [`.claude/technical-context.md`](.claude/technical-context.md)
+
+---
+
 ## Non-Negotiable Principles
 
 These are settled decisions. Do not propose alternatives unless explicitly asked.
@@ -162,9 +193,8 @@ All components extend `AppElement extends HTMLElement`. It provides:
   - `recordedAt` — when the device logged the event. Immutable. Used for log ordering only.
   - Timestamps are **descriptive, not arbitrative** — they record reality for stats and data visualisation, not for system conflict resolution. A wrong `occurredAt` is a data quality issue, not an integrity issue.
 - Event ordering uses `recordedAt` as primary sort key and `deviceId` as secondary.
-- **V1: state is always calculated by replaying the full event log on boot.** No caching, no materialised views. However, log sizes can reach hundreds of thousands of events in team and competition apps — snapshot support is not a distant concern and the boot function must be designed to swap strategies without touching anything else.
-- **V2 note:** snapshots are the confirmed approach for large logs — a periodic frozen state tagged with a log position, with only subsequent events replayed on top. Materialised views are not suitable for out-of-order multi-device streams.
-- **The boot sequence must be isolated behind a single function.** Nothing calls IDB directly at boot except this function. This makes the V1→V2 transition a one-line change.
+- **V1: state is always calculated by replaying the full event log on boot.** No caching, no materialised views. The boot function must be designed so the V1→V2 snapshot strategy is a one-line swap — see `.claude/technical-context.md`.
+- **The boot sequence must be isolated behind a single function.** Nothing calls IDB directly at boot except this function.
 - Schema versioning from day one. Migration functions run inside `boot()` before state is replayed and before any UI renders. Not in SW activate — migrations are data-layer concerns, not service-worker concerns.
 - A failed migration must throw — it will be caught and halt app startup visibly, never silently corrupt data.
 - The IDB wrapper is implemented in `core/idb/idb.js` — Promise-based and minimal. Exports `openDB`, `put`, `get`, `getAll`, `del`. No `idb` library.
@@ -247,24 +277,15 @@ Import reads the JSON file, writes events via `importEvents()` (idempotent), and
 
 All four functions are async. `exportData` and `importData` require `Store.boot()` to have been called first.
 
-### P2P (V2 — schema ready in V1)
+### P2P (`modules/p2p/`) — V2
 
-Two modes, both should be elegant:
+Two modes: peer-to-peer (WebRTC, QR-based establishment) and hub mode (one collector, N reporters). The event log's `deviceId` field and append-only model are designed for this from V1 — no schema changes needed when V2 is built. The module is not scaffolded unless selected in the CLI.
 
-- **Peer-to-peer mode** (team apps, 3-6 users): QR-based WebRTC signaling for connection establishment only. Device A displays a QR code, Device B scans it to establish the connection. Data flows over the P2P connection once established, not via QR.
-- **Hub mode** (competition apps): one dedicated collector device, others are reporters. QR-based connection establishment. The hub is a log aggregator and read model — it collects domain logs, merges them, and broadcasts the consolidated state back to all connected devices so every reporter gets a live view of the full competition, not just their own domain slice.
-- **Domain ownership (competition):** each reporter owns a data domain (a court, a match, a category) and is the only contributor to it. This makes log consolidation a simple union — no conflicts possible by design, no merge logic needed. The social contract of the competition replaces technical enforcement. No hard scoping required.
-- **Log consolidation (team/sharing):** event order is a convenience not a correctness requirement in non-competition scenarios. Union of logs is sufficient.
-- **Concurrent editing** is handled by user patterns, not technical locks. Domain handover (judge submits/closes a match, server user can then edit) is enforced by UI convention. A "domain closed" event in the log is sufficient. Technical conflict resolution is V5+.
-- **No user identity or authentication in V1.** `deviceId` provides implicit identity — one device per person is sufficient. No accounts, no login, no auth infrastructure.
-- **V3/V4 note — score signing:** a mutual confirmation protocol where both parties append a "result confirmed" event with their `deviceId`. The digital equivalent of signing a match sheet. No cryptography or accounts required — social confirmation recorded in the log.
-- **Clock integrity:** `deviceId` as secondary sort key ensures determinism but does not fix bad device clocks. In V2, a simple clock drift check on P2P connection establishment (compare to hub time, warn if above threshold) is the appropriate response. Not before it is a real observed problem.
+→ See [`.claude/technical-context.md`](.claude/technical-context.md) for full design, hub mode detail, and V2/V3/V4 roadmap.
 
-The data model (append-only event log with `deviceId`) is designed for this from V1. The P2P module is not scaffolded unless selected in the CLI, but the data structure never changes.
+### Multilingual Support (V1 foundation built)
 
-### Multilingual Support (V1 foundation built; Intl wrappers remain V4)
-
-Basic multi-locale support is implemented in V1. Two habits are non-negotiable from day one:
+Two non-negotiable habits:
 
 1. **No hardcoded strings in `_lib/` components.** `core/strings.js` is a flat key registry. `_lib/` components call `t('namespace.key')` for every user-visible string. Apps register defaults at startup in `app/strings.js` — the **first import in `app/main.js`** — using `defineStrings(obj, locale = 'en')`. The `locale` param lets apps register translations for other locales at startup too.
 2. **CSS logical properties only** (already required in Coding Standards). RTL layout becomes a single `dir="rtl"` attribute on the root.
@@ -278,9 +299,7 @@ Basic multi-locale support is implemented in V1. Two habits are non-negotiable f
 - Language switching triggers `location.reload()` — the new locale is read from `localStorage` on next boot.
 - App locale packs live at `app/locales/<locale>.js` and are imported in `app/main.js`.
 
-**Still deferred to V4:**
-- `Intl.DateTimeFormat` / `Intl.NumberFormat` wrappers so dates and numbers respond to locale changes
-- More sophisticated fallback chains (current: active → en → key is sufficient for now)
+`Intl.DateTimeFormat`/`Intl.NumberFormat` wrappers and fallback chain improvements are deferred to V4 — see [`.claude/technical-context.md`](.claude/technical-context.md).
 
 ---
 
@@ -297,11 +316,7 @@ Basic multi-locale support is implemented in V1. Two habits are non-negotiable f
 
 ## Distribution and Updates
 
-### Git and publishing
-
-One git repository — this monorepo. No separate repo for the library or the reference app. When the CLI generates a user project, that project starts its own fresh independent git repo with no link back here.
-
-The CLI is distributed via GitHub. Users run it with `npx socle`. No npm publishing required unless explicitly decided later.
+Single monorepo. CLI distributed via GitHub (`npx socle`). No npm publishing planned.
 
 ### lib-version.json
 
@@ -337,18 +352,6 @@ Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, 
 
 `npx socle manage` — interactive TUI showing all currently installed modules pre-selected; the developer toggles modules on/off and confirms; adds and removes are applied in batch using the same `addModule`/`removeModule` logic.
 
-### Core API stability policy
-
-- **Before 1.0:** breaking changes are acceptable with a migration note in the changelog.
-- **After 1.0:** the core API (AppElement interface, Store API, Router, IDB conventions) is frozen. All new capabilities are additive. A breaking change requires a new major version and a written migration guide. This is a discipline decision, not a tooling one — enforce it through deliberate review, not automation.
-
-### What types of changes are safe vs risky
-
-- **New modules or components** — safe. New files in `_lib/`, developer opts in by using them.
-- **Additive changes to existing core** — safe. New methods, new hooks, new gesture types. Existing code is unaffected.
-- **Changes to core API signatures** — risky before 1.0, forbidden after 1.0 without a major version bump.
-- **IDB schema changes** — always require a migration function. Never change the event log schema shape — only add new object stores or indexes.
-
 ---
 
 ## Coding Standards
@@ -371,39 +374,16 @@ Valid module names: `gestures`, `sync`, `images`, `modal-dialog`, `app-header`, 
 
 ---
 
-## Build Order
-
-Work in this order. Do not skip ahead.
-
-1. Monorepo scaffolding, build script, reference app shell
-2. `AppElement` base class, Shadow DOM, CSS token system, `adoptedStyleSheets`
-3. Router (`<app-router>`, `navigate()`, SW navigation intercept)
-4. Store + IDB layer (event sourcing schema, migrations, IDB wrapper)
-5. SW lifecycle + `version.json` update flow (`<sw-manager>`, `<update-banner>`)
-6. Gesture library (before any real UI — it will be needed constantly)
-7. Reference app features (yearly goals — YourYear) built on the above
-8. CLI scaffolding tool (extracted from what exists, not designed ahead of it)
-9. Scaffolded app ✓ (`modal-dialog`, `app-header`, `toast`, `images` modules; full scaffold home page; CLI `add`/`remove` commands; interactive module selector; `_modules/` per-module scaffold pages)
-10. Simple Library Webpage
-11. Simple store (a state store, not log based)
-12. P2P module (V2)
-13. List components, additional UI primitives
-
----
-
 ## Reference App
 
-The first reference app is a **yearly goals app** named **YourYear**. It exercises every core library feature:
+The reference app is a **yearly goals app** named **YourYear**. It exercises every core library feature:
 - Offline-first (works with no connection)
 - Event sourcing (goals are append-only, auditable, correctable)
 - Gestures (hold-drag on a goal bar to adjust progress percentage; keyboard Arrow key parity and haptic feedback provided automatically by the gesture library)
 - Update flow (SW update banner)
 - Routing (`/:year` for year overview, `/` redirects to current year, `*` for not-found)
 
-The second reference app is a **fencing competition scoring app** (built after P2P is implemented):
-- P2P sync (judges relay scores to a head scorer)
-- Domain ownership (one judge per piste)
-- Long session stability (competition days)
+A second reference app (fencing competition scorer) is planned for V2 after P2P is implemented — see [`.claude/technical-context.md`](.claude/technical-context.md).
 
 **Every library feature must be used in the reference app before it is considered complete.**
 
@@ -414,11 +394,10 @@ The second reference app is a **fencing competition scoring app** (built after P
 ### Dev server
 
 ```bash
-npm run dev          # desktop — http://localhost:3000
-npm run dev:https    # mobile — https://localhost:3000 + https://<LAN-IP>:3000
+npm run dev:https    # https://localhost:3000 + https://<LAN-IP>:3000
 ```
 
-`dev:https` requires a locally-trusted cert in `reference-app/` (`localhost+1.pem` + `localhost+1-key.pem`). Service workers only register on HTTPS or `localhost` — always use `dev:https` when testing offline mode or SW behaviour on a real device.
+Run from `reference-app/`. `dev:https` requires a locally-trusted cert (`localhost+1.pem` + `localhost+1-key.pem`). Service workers only register on HTTPS or `localhost` — always use `dev:https` when testing offline mode or SW behaviour on a real device.
 
 To generate the cert (one-time per machine):
 ```bash
