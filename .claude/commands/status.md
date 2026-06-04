@@ -40,7 +40,7 @@ Check the file system against the build order defined in CLAUDE.md and report:
 7. **Reference app features (YourYear)**
    - Check: `reference-app/app/pages/year-redirect.js`, `home-page.js`, `not-found-page.js`
    - Check: `reference-app/app/components/goal-item/`, `goal-dialog/`, `year-header/`
-   - Check: `reference-app/app/store/reducer.js` handles `goal:set`, `goal:progress-set`, `goal:fail`, `goal:deleted`, `capstone:set`, `capstone:progress-set`, `capstone:fail`, `capstone:deleted`, `year:image-set`, `year:image-removed`
+   - Check: `reference-app/app/store/reducer.js` handles `goal:title-set`, `goal:progress-set`, `goal:deleted`, `milestone:title-set`, `milestone:progress-set`, `milestone:deleted`, `wow:title-set`, `wow:progress-set`, `wow:deleted`, `year:image-set`, `year:image-removed`
    - Check: `reference-app/app/strings.js` (all string keys), `reference-app/app/locales/fr.js`, `reference-app/app/locales/ca.js` (key parity)
    - Check: `core/strings.js` exports `t`, `defineStrings`, `setLocale`, `getLocale`, `reset`
    - Check: `reference-app/tests/e2e/goals.spec.js` covers creation, deletion (swipe + dialog), progress, fail/restore
@@ -58,8 +58,17 @@ Check the file system against the build order defined in CLAUDE.md and report:
    - Check: `cli/index.test.js` exists with unit and integration tests
    - Check: root `package.json` has `bin: { "socle": "./cli/index.js" }`
 
-9. **P2P module (V2)**
-   - Check: `modules/p2p/` — expected to not exist yet
+9. **Simple webpage for the library**
+   - Check: `docs/` or a dedicated webpage directory — expected to not exist yet
+
+10. **Simple store**
+    - Check: `core/store/store-simple.js` or equivalent — expected to not exist yet
+
+11. **P2P module (V2)**
+    - Check: `modules/p2p/` — expected to not exist yet
+
+12. **Additional UI components (toast, lists, etc.)**
+    - Check: `modules/toast/`, `modules/ui/` — expected to not exist yet or stub only
 
 ### Output format
 
