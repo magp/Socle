@@ -18,7 +18,7 @@ async function openAndSaveGoal(page, title) {
     const d = document.querySelector('app-router')?.shadowRoot
       ?.querySelector('home-page')?.shadowRoot
       ?.querySelector('goal-dialog')?.shadowRoot
-      ?.querySelector('dialog');
+      ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
     return d?.open;
   });
   await page.evaluate((t) => {

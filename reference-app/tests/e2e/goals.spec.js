@@ -37,7 +37,7 @@ async function fillAndSaveDialog(page, title) {
     const d = document.querySelector('app-router')?.shadowRoot
       ?.querySelector('home-page')?.shadowRoot
       ?.querySelector('goal-dialog')?.shadowRoot
-      ?.querySelector('dialog');
+      ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
     return d?.open;
   });
   await page.evaluate((t) => {
@@ -421,7 +421,7 @@ test.describe('Goal delete via dialog', () => {
       const d = document.querySelector('app-router')?.shadowRoot
         ?.querySelector('home-page')?.shadowRoot
         ?.querySelector('goal-dialog')?.shadowRoot
-        ?.querySelector('dialog');
+        ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
       return d?.open;
     });
 
@@ -451,7 +451,7 @@ test.describe('Goal delete via dialog', () => {
       const d = document.querySelector('app-router')?.shadowRoot
         ?.querySelector('home-page')?.shadowRoot
         ?.querySelector('goal-dialog')?.shadowRoot
-        ?.querySelector('dialog');
+        ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
       return d?.open;
     });
 
@@ -488,7 +488,7 @@ test.describe('Goal delete via dialog', () => {
       const d = document.querySelector('app-router')?.shadowRoot
         ?.querySelector('home-page')?.shadowRoot
         ?.querySelector('goal-dialog')?.shadowRoot
-        ?.querySelector('dialog');
+        ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
       return d?.open;
     });
 
