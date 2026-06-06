@@ -2,9 +2,11 @@
 import readline from 'readline';
 import fs, { realpathSync } from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
+import { createServer } from 'http';
+import os from 'os';
 import { fileURLToPath } from 'url';
-import { multiSelect } from './prompt.js';
+import { multiSelect, singleSelect } from './prompt.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -15,13 +17,13 @@ const MODULES_DIR = path.join(ROOT, 'modules');
 const TEXT_EXTS = new Set(['.js', '.json', '.html', '.md', '.yml', '.yaml', '.css', '.txt', '.template']);
 
 const MODULE_OPTIONS = [
-  { label: 'Gesture library',      value: 'gestures' },
-  { label: 'Sync (export/import)', value: 'sync' },
-  { label: 'Image handling',       value: 'images' },
+  { label: 'Gesture library',      value: 'gestures',     description: 'Tap, swipe, hold-drag' },
+  { label: 'Sync (export/import)', value: 'sync',         description: 'Export & import backup files' },
+  { label: 'Image handling',       value: 'images',       description: 'Compress and store photos' },
   { type: 'separator', label: 'UI' },
-  { label: 'App header',           value: 'app-header' },
-  { label: 'Modal dialog',         value: 'modal-dialog' },
-  { label: 'Toast notifications',  value: 'toast' },
+  { label: 'App header',           value: 'app-header',   description: 'Sticky header, safe area' },
+  { label: 'Modal dialog',         value: 'modal-dialog', description: 'Sheet and dialog component' },
+  { label: 'Toast notifications',  value: 'toast',        description: 'Ephemeral feedback messages' },
   { label: 'P2P sync',             value: 'p2p', disabled: true, hint: 'coming in V2' },
 ];
 
@@ -85,6 +87,8 @@ function buildTokenMap(options) {
     appName, appShortName, appDescription, githubUser, version, port,
     includeGestures, includeSync, includeImages,
     includeAppHeader, includeModal, includeToast,
+    storeType = 'event-log',
+    exportExt = '.data',
   } = options;
 
   // HP_* tokens are placed FIRST so that any %%APP_NAME%% they contain
@@ -162,7 +166,7 @@ function buildTokenMap(options) {
     '            <button class="secondary" id="export-btn">Export backup</button>',
     '            <button class="secondary" id="import-btn">Import</button>',
     '          </div>',
-    '          <input type="file" accept=".json" id="sync-file-input" hidden />',
+    '          <input type="file" accept="%%EXPORT_EXT%%,.json" id="sync-file-input" hidden />',
     '        </section>',
   ].join('\n') : '';
 
@@ -216,7 +220,7 @@ function buildTokenMap(options) {
     '    this._onExport = async () => {',
     "      const { exportData, downloadExport } = await import('../../_lib/modules/sync/sync.js');",
     '      const data = await exportData();',
-    "      downloadExport('%%APP_NAME%%-backup.json', data);" + toastCall,
+    "      downloadExport(data, '%%APP_NAME%%-backup%%EXPORT_EXT%%');" + toastCall,
     '    };',
     "    this._onImportClick = () => sr.querySelector('#sync-file-input').click();",
     '    this._onFileChange = async e => {',
@@ -311,7 +315,7 @@ function buildTokenMap(options) {
     : '';
 
   const APP_HEADER_ELEMENT = includeAppHeader
-    ? `<app-header>${appName}</app-header>`
+    ? `<app-header label="${appName}"></app-header>`
     : '';
 
   return {
@@ -338,7 +342,9 @@ function buildTokenMap(options) {
     APP_HEADER_IMPORT,
     MODAL_IMPORT,
     APP_HEADER_ELEMENT,
+    APP_ID:          appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
     APP_NAME:        appName,
+    EXPORT_EXT:      exportExt,
     APP_SHORT_NAME:  appShortName,
     APP_DESCRIPTION: appDescription,
     LANG:            'en',
@@ -346,6 +352,13 @@ function buildTokenMap(options) {
     PORT:            String(port),
     IMAGES_IMPORT:   includeImages ? "import './pages/images-page.js';" : '',
     IMAGES_ROUTE:    includeImages ? "  { path: '/images', component: 'images-page' }," : '',
+    STORE_IMPORT:    "import { boot } from '../_lib/core/store/store.js';",
+    REDUCER_IMPORT:  storeType === 'simple'
+      ? ''
+      : "import { reducer } from './store/reducer.js';",
+    STORE_BOOT:      storeType === 'simple'
+      ? `await boot({ dbName: '${appName}' });`
+      : `await boot({ dbName: '${appName}', reducer });`,
   };
 }
 
@@ -356,6 +369,8 @@ export function scaffoldApp(options, destDir) {
     appName, appShortName, appDescription, githubUser,
     includeSync = false, includeGestures = true, includeImages = false,
     includeAppHeader = false, includeModal = false, includeToast = false,
+    storeType = 'event-log',
+    exportExt = '.data',
     accentColor, version, port = 3000,
   } = options;
 
@@ -363,6 +378,7 @@ export function scaffoldApp(options, destDir) {
     appName, appShortName, appDescription, githubUser, version, port,
     includeGestures, includeSync, includeImages,
     includeAppHeader, includeModal, includeToast,
+    storeType, exportExt,
   };
 
   // Copy scaffold base, excluding _modules/ (handled separately below)
@@ -421,6 +437,24 @@ export function scaffoldApp(options, destDir) {
 
   fs.mkdirSync(path.join(destDir, '_lib', 'modules'), { recursive: true });
   fs.cpSync(CORE_DIR, path.join(destDir, '_lib', 'core'), { recursive: true });
+
+  // Remove the store variant that wasn't selected; for simple, rename store-simple.js → store.js
+  // so that other core files (sw-manager, update-banner) keep importing 'store.js' unchanged.
+  if (storeType === 'simple') {
+    const storeJs     = path.join(destDir, '_lib', 'core', 'store', 'store.js');
+    const storeSimple = path.join(destDir, '_lib', 'core', 'store', 'store-simple.js');
+    if (fs.existsSync(storeJs)) fs.unlinkSync(storeJs);
+    if (fs.existsSync(storeSimple)) fs.renameSync(storeSimple, storeJs);
+  } else {
+    const storeSimple = path.join(destDir, '_lib', 'core', 'store', 'store-simple.js');
+    if (fs.existsSync(storeSimple)) fs.unlinkSync(storeSimple);
+  }
+
+  // Simple store: remove reducer.js (no event log, no reducer needed)
+  if (storeType === 'simple') {
+    const reducerPath = path.join(destDir, 'app', 'store', 'reducer.js');
+    if (fs.existsSync(reducerPath)) fs.unlinkSync(reducerPath);
+  }
   if (includeGestures)  fs.cpSync(path.join(MODULES_DIR, 'gestures'),     path.join(destDir, '_lib', 'modules', 'gestures'),     { recursive: true });
   if (includeSync)      fs.cpSync(path.join(MODULES_DIR, 'sync'),         path.join(destDir, '_lib', 'modules', 'sync'),         { recursive: true });
   if (includeImages)    fs.cpSync(path.join(MODULES_DIR, 'images'),       path.join(destDir, '_lib', 'modules', 'images'),       { recursive: true });
@@ -430,7 +464,7 @@ export function scaffoldApp(options, destDir) {
 
   fs.writeFileSync(
     path.join(destDir, '_lib', 'lib-version.json'),
-    JSON.stringify({ version, modules, scaffolded: new Date().toISOString().split('T')[0] }, null, 2) + '\n'
+    JSON.stringify({ version, modules, store: storeType, scaffolded: new Date().toISOString().split('T')[0] }, null, 2) + '\n'
   );
 
   patchAccentColor(path.join(destDir, '_lib', 'core', 'styles', 'tokens.css'), accentColor);
@@ -593,11 +627,27 @@ async function runScaffold(dirArg) {
 
   rl.close();
 
+  const storeType = await singleSelect('Data store', [
+    { label: 'Event log',    value: 'event-log', description: 'Offline-first, auditable, P2P-ready' },
+    { label: 'Simple state', value: 'simple',    description: 'IDB snapshot, no event log' },
+  ]);
+
   const selectedModules = await multiSelect('Which modules do you need?', MODULE_OPTIONS, ['gestures', 'app-header', 'modal-dialog', 'toast']);
+
+  let exportExt = `.${appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+  if (selectedModules.includes('sync')) {
+    // rl was closed before singleSelect/multiSelect — open a fresh interface for this prompt
+    const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask2 = makeAsk(rl2);
+    const extInput = (await ask2(`Export file extension [${exportExt}]: `)).trim();
+    rl2.close();
+    if (extInput) exportExt = extInput.startsWith('.') ? extInput : `.${extInput}`;
+  }
 
   console.log('\nScaffolding...');
   scaffoldApp({
     appName, appShortName, appDescription, githubUser, accentColor, version, port,
+    storeType, exportExt,
     includeGestures:  selectedModules.includes('gestures'),
     includeSync:      selectedModules.includes('sync'),
     includeImages:    selectedModules.includes('images'),
@@ -622,8 +672,8 @@ async function runScaffold(dirArg) {
   console.log(`  cd ${dirName}`);
   console.log('  npm install');
   console.log(`  git init && git add . && git commit -m "chore: scaffold from socle ${version}"`);
-  console.log('  npm run build');
-  console.log('  npm run serve');
+  console.log('  npx socle cert        # set up HTTPS  (optional, needed for mobile)');
+  console.log('  npm run dev:https     # or npm run dev (if HTTPS not configured)');
 }
 
 async function runUpdate() {
@@ -690,12 +740,155 @@ async function runManage() {
   rl.close();
 }
 
+// ── cert ──────────────────────────────────────────────────────────────────────
+
+function getLanIP() {
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const iface of ifaces) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return null;
+}
+
+function serveCa(caFilePath) {
+  const ca = fs.readFileSync(caFilePath);
+  const ip = getLanIP();
+  const port = 18080;
+  return new Promise(resolve => {
+    const server = createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/x-pem-file', 'Content-Disposition': 'attachment; filename="rootCA.pem"' });
+      res.end(ca);
+    });
+    server.listen(port, '0.0.0.0', () => {
+      console.log('\nTo install the CA on your Android phone (one-time per device):');
+      console.log(`  1. Open this URL on your phone: http://${ip ?? '<your-ip>'}:${port}/rootCA.pem`);
+      console.log('  2. Tap the file → Install as CA certificate');
+      console.log('\nPress Enter when done...');
+      const rl = readline.createInterface({ input: process.stdin });
+      rl.once('line', () => { rl.close(); server.close(); resolve(); });
+    });
+  });
+}
+
+function runMkcert(certFile, keyFile, host) {
+  const args = ['-cert-file', certFile, '-key-file', keyFile,
+                'localhost', '127.0.0.1', '::1', ...(host ? [host] : [])];
+  try {
+    execFileSync('mkcert', ['-install'], { stdio: 'inherit' });
+    execFileSync('mkcert', args, { stdio: 'inherit' });
+  } catch {
+    console.error('\nmkcert not found. Install it first:');
+    console.error('  macOS:   brew install mkcert');
+    console.error('  Linux:   https://github.com/FiloSottile/mkcert#linux');
+    console.error('  Windows: https://github.com/FiloSottile/mkcert#windows');
+    process.exit(1);
+  }
+}
+
+export function ensureDevHttps(pkgPath) {
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  if (pkg.scripts?.['dev:https']) return;
+  const dev = pkg.scripts?.dev ?? '';
+  const portMatch = dev.match(/--listen\s+(\d+)/);
+  const port = portMatch?.[1] ?? '3000';
+  const devHttps = portMatch
+    ? dev.replace(`--listen ${port} `, `--listen tcp:0.0.0.0:${port} `) + ' --ssl-cert local.pem --ssl-key local-key.pem'
+    : `${dev} --listen tcp:0.0.0.0:${port} --single --ssl-cert local.pem --ssl-key local-key.pem`.trim();
+  pkg.scripts['dev:https'] = devHttps;
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  console.log('✔ dev:https added to package.json');
+}
+
+async function runCert() {
+  const pkgPath = path.join(process.cwd(), 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    console.error('No package.json found. Run npx socle cert from your project root.');
+    process.exit(1);
+  }
+
+  const choice = await singleSelect('HTTPS certificate setup', [
+    { label: 'None',             value: 'none',    description: 'No HTTPS — remove dev:https script' },
+    { label: 'Shared',           value: 'shared',  description: 'One cert in ~/.socle-certs/, symlinked here (reuse across projects)' },
+    { label: 'Project-specific', value: 'project', description: 'Cert generated in this folder only' },
+  ]);
+
+  if (choice === 'none') {
+    for (const f of ['local.pem', 'local-key.pem']) {
+      if (fs.existsSync(f)) fs.unlinkSync(f);
+    }
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    delete pkg.scripts['dev:https'];
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log('\n✔ dev:https removed. Use npm run dev for HTTP-only development.');
+    return;
+  }
+
+  const CERT_DIR   = path.join(os.homedir(), '.socle-certs');
+  const GLOBAL_PEM = path.join(CERT_DIR, 'local.pem');
+  const GLOBAL_KEY = path.join(CERT_DIR, 'local-key.pem');
+
+  function link(target, name) {
+    if (fs.existsSync(name)) fs.unlinkSync(name);
+    fs.symlinkSync(target, name);
+  }
+
+  if (choice === 'shared' && fs.existsSync(GLOBAL_PEM) && fs.existsSync(GLOBAL_KEY)) {
+    console.log('✔ Reusing shared cert from ~/.socle-certs/');
+    link(GLOBAL_PEM, 'local.pem');
+    link(GLOBAL_KEY, 'local-key.pem');
+    ensureDevHttps(pkgPath);
+    console.log('\nRun: npm run dev:https');
+    return;
+  }
+
+  if (choice === 'project' && fs.existsSync('local.pem') && fs.existsSync('local-key.pem')) {
+    console.log('✔ Reusing project cert (delete local.pem + local-key.pem to regenerate)');
+    ensureDevHttps(pkgPath);
+    console.log('\nRun: npm run dev:https');
+    return;
+  }
+
+  // Need to generate — ask for mobile IP, pre-fill detected LAN address
+  const detectedIP = getLanIP();
+  const ipPrompt = detectedIP
+    ? `Network IP for mobile testing [${detectedIP}]: `
+    : 'Network IP for mobile testing (blank to skip): ';
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = makeAsk(rl);
+  const answer = await ask(ipPrompt);
+  rl.close();
+  const raw  = answer.trim().replace(/^https?:\/\//, '').replace(/[/:].*/g, '');
+  const host = raw || detectedIP || null;
+
+  if (choice === 'shared') {
+    fs.mkdirSync(CERT_DIR, { recursive: true });
+    runMkcert(GLOBAL_PEM, GLOBAL_KEY, host);
+    link(GLOBAL_PEM, 'local.pem');
+    link(GLOBAL_KEY, 'local-key.pem');
+  } else {
+    runMkcert('local.pem', 'local-key.pem', host);
+  }
+
+  ensureDevHttps(pkgPath);
+  console.log('\n✔ Cert ready — desktop browsers trust it automatically.');
+
+  if (host) {
+    const caRoot = execFileSync('mkcert', ['-CAROOT'], { encoding: 'utf8' }).trim();
+    console.log(`✔ Cert covers ${host} — connect from your phone at https://${host}:3000`);
+    await serveCa(path.join(caRoot, 'rootCA.pem'));
+  }
+
+  console.log('\nRun: npm run dev:https');
+}
+
 // ── entry ─────────────────────────────────────────────────────────────────────
 
 if (realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [,, cmd, arg] = process.argv;
   let runner;
-  if      (cmd === 'update') runner = runUpdate();
+  if      (cmd === 'cert')   runner = runCert();
+  else if (cmd === 'update') runner = runUpdate();
   else if (cmd === 'add')    runner = runAdd(arg);
   else if (cmd === 'remove') runner = runRemove(arg);
   else if (cmd === 'manage') runner = runManage();

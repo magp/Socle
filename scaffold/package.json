@@ -6,7 +6,6 @@
     "build": "node utils/build.js",
     "serve": "npx serve dist --listen %%PORT%% --single",
     "dev": "node utils/build.js && npx serve dist --listen %%PORT%% --single",
-    "dev:https": "node utils/build.js && npx serve dist --listen tcp:0.0.0.0:%%PORT%% --single --ssl-cert localhost+1.pem --ssl-key localhost+1-key.pem",
     "test": "vitest run && playwright test",
     "test:unit": "vitest run",
     "test:watch": "vitest",

@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll, vi } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import os from 'os';
-import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports } from './index.js';
+import { replaceTokens, replaceBlockTokens, scaffoldApp, updateLib, addModule, removeModule, findModuleImports, ensureDevHttps } from './index.js';
 
 // ── unit: replaceTokens ───────────────────────────────────────────────────────
 
@@ -178,6 +178,74 @@ describe('scaffoldApp', () => {
 
     const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
     expect(lv.modules).toContain('sync');
+  });
+
+  describe('store type selection', () => {
+    it('event-log (default): main.js imports store.js and reducer', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
+      const main = readFileSync(join(dest, 'app', 'main.js'), 'utf8');
+      expect(main).toContain("from '../_lib/core/store/store.js'");
+      expect(main).toContain("from './store/reducer.js'");
+      expect(main).toContain('reducer');
+    });
+
+    it('event-log: _lib/core/store has store.js but not store-simple.js', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+    });
+
+    it('event-log: app/store/reducer.js exists', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
+      expect(existsSync(join(dest, 'app', 'store', 'reducer.js'))).toBe(true);
+    });
+
+    it('event-log: lib-version.json records store as event-log', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'event-log' }, dest);
+      const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+      expect(lv.store).toBe('event-log');
+    });
+
+    it('simple: main.js imports store.js with no reducer', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+      const main = readFileSync(join(dest, 'app', 'main.js'), 'utf8');
+      expect(main).toContain("from '../_lib/core/store/store.js'");
+      expect(main).not.toContain("from './store/reducer.js'");
+      expect(main).not.toContain(', reducer }');
+    });
+
+    it('simple: boot call has no reducer argument', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+      const main = readFileSync(join(dest, 'app', 'main.js'), 'utf8');
+      expect(main).toContain("await boot({ dbName:");
+      expect(main).not.toContain('reducer });');
+    });
+
+    it('simple: _lib/core/store has store.js (renamed from store-simple) but not store-simple.js', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store.js'))).toBe(true);
+      expect(existsSync(join(dest, '_lib', 'core', 'store', 'store-simple.js'))).toBe(false);
+    });
+
+    it('simple: app/store/reducer.js does not exist', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+      expect(existsSync(join(dest, 'app', 'store', 'reducer.js'))).toBe(false);
+    });
+
+    it('simple: lib-version.json records store as simple', () => {
+      const dest = makeTmpDir();
+      scaffoldApp({ ...BASE_OPTIONS, storeType: 'simple' }, dest);
+      const lv = JSON.parse(readFileSync(join(dest, '_lib', 'lib-version.json'), 'utf8'));
+      expect(lv.store).toBe('simple');
+    });
   });
 });
 
@@ -375,5 +443,65 @@ describe('removeModule', () => {
     const dest = makeTmpDir();
     await expect(removeModule(dest, 'sync', () => Promise.resolve('y')))
       .rejects.toThrow('No _lib/lib-version.json found');
+  });
+});
+
+// ── ensureDevHttps ────────────────────────────────────────────────────────────
+
+describe('ensureDevHttps', () => {
+  function writePkg(dir, scripts) {
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts }, null, 2) + '\n');
+  }
+  function readPkg(dir) {
+    return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+  }
+
+  it('adds dev:https derived from the dev script', () => {
+    const dir = makeTmpDir();
+    writePkg(dir, { dev: 'node utils/build.js && npx serve dist --listen 3000 --single' });
+    ensureDevHttps(join(dir, 'package.json'));
+    const pkg = readPkg(dir);
+    expect(pkg.scripts['dev:https']).toBe(
+      'node utils/build.js && npx serve dist --listen tcp:0.0.0.0:3000 --single --ssl-cert local.pem --ssl-key local-key.pem'
+    );
+  });
+
+  it('is idempotent — does not overwrite an existing dev:https', () => {
+    const dir = makeTmpDir();
+    const existing = 'custom dev:https command';
+    writePkg(dir, {
+      dev: 'node utils/build.js && npx serve dist --listen 3000 --single',
+      'dev:https': existing,
+    });
+    ensureDevHttps(join(dir, 'package.json'));
+    expect(readPkg(dir).scripts['dev:https']).toBe(existing);
+  });
+
+  it('uses port 3000 as fallback when dev script has no --listen port', () => {
+    const dir = makeTmpDir();
+    writePkg(dir, { dev: 'node utils/build.js' });
+    ensureDevHttps(join(dir, 'package.json'));
+    expect(readPkg(dir).scripts['dev:https']).toContain('tcp:0.0.0.0:3000');
+  });
+
+  it('handles a non-standard port in the dev script', () => {
+    const dir = makeTmpDir();
+    writePkg(dir, { dev: 'node utils/build.js && npx serve dist --listen 8080 --single' });
+    ensureDevHttps(join(dir, 'package.json'));
+    expect(readPkg(dir).scripts['dev:https']).toContain('tcp:0.0.0.0:8080');
+  });
+
+  it('preserves all other scripts when writing', () => {
+    const dir = makeTmpDir();
+    writePkg(dir, {
+      build: 'node utils/build.js',
+      dev: 'node utils/build.js && npx serve dist --listen 3000 --single',
+      test: 'vitest run',
+    });
+    ensureDevHttps(join(dir, 'package.json'));
+    const pkg = readPkg(dir);
+    expect(pkg.scripts.build).toBe('node utils/build.js');
+    expect(pkg.scripts.test).toBe('vitest run');
+    expect(pkg.scripts['dev:https']).toBeTruthy();
   });
 });
