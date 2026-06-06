@@ -359,7 +359,7 @@ class YearHeader extends Gestures(AppElement) {
       </div>
 
       <input type="file" id="photo-input" accept="image/*" hidden>
-      <input type="file" id="import-input" accept=".json" hidden>
+      <input type="file" id="import-input" accept=".youryear,.json" hidden>
 
       <dialog id="import-confirm" aria-modal="true">
         <div class="menu-handle"></div>
@@ -518,7 +518,7 @@ class YearHeader extends Gestures(AppElement) {
       this._photoSheet.close();
       const imageId = Store.getState().images?.[this._year];
       await Store.dispatch('year:image-removed', { year: String(this._year) });
-      if (imageId) Store.deleteBlob(imageId);
+      if (imageId) await Store.deleteBlob(imageId);
     };
     this.shadowRoot.querySelector('#photo-remove').addEventListener('click', this._onPhotoRemove);
 
@@ -530,7 +530,7 @@ class YearHeader extends Gestures(AppElement) {
       const blob = await compressImage(file, { maxWidth: 1200, quality: 0.8 });
       await Store.attachBlob(imageId, blob);
       await Store.dispatch('year:image-set', { year: String(this._year), imageId });
-      if (oldImageId) Store.deleteBlob(oldImageId);
+      if (oldImageId) await Store.deleteBlob(oldImageId);
       e.target.value = '';
     };
     photoInput.addEventListener('change', this._onPhotoInput);
@@ -544,7 +544,7 @@ class YearHeader extends Gestures(AppElement) {
       const year = this._year;
       const data = await exportData({ eventFilter: e => String(e.payload?.year) === String(year) });
       const ts   = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
-      downloadExport(data, `${ts}_youryear-${year}.json`);
+      downloadExport(data, `${ts}_youryear-${year}.youryear`);
     };
     this.shadowRoot.querySelector('#export-year-btn').addEventListener('click', this._onExportYear);
 
@@ -552,7 +552,7 @@ class YearHeader extends Gestures(AppElement) {
       this._menuDialog.close();
       const data = await exportData();
       const ts   = new Date().toISOString().replace(/\D/g, '').slice(0, 12);
-      downloadExport(data, `${ts}_youryear-all.json`);
+      downloadExport(data, `${ts}_youryear-all.youryear`);
     };
     this.shadowRoot.querySelector('#export-all-btn').addEventListener('click', this._onExportAll);
 
@@ -575,7 +575,8 @@ class YearHeader extends Gestures(AppElement) {
         msgEl.textContent = t('sync.import-confirm', { events: result.eventsAdded, images: result.imagesAdded });
         successEl.hidden = false;
         errorEl.hidden   = true;
-      } catch {
+      } catch (err) {
+        console.error('Import failed:', err);
         msgEl.textContent = t('sync.import-error');
         successEl.hidden  = true;
         errorEl.hidden    = false;

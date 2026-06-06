@@ -50,7 +50,7 @@ async function createGoal(page, title) {
     const d = document.querySelector('app-router')?.shadowRoot
       ?.querySelector('home-page')?.shadowRoot
       ?.querySelector('goal-dialog')?.shadowRoot
-      ?.querySelector('dialog');
+      ?.querySelector('#modal')?.shadowRoot?.querySelector('dialog');
     return d?.open;
   });
   await page.evaluate((t) => {
@@ -85,18 +85,33 @@ async function goalCount(page) {
 }
 
 async function injectImportFile(page, content) {
-  const json = typeof content === 'string' ? content : JSON.stringify(content);
-  await page.evaluate((json) => {
-    const file = new File([json], 'export.json', { type: 'application/json' });
-    const dt   = new DataTransfer();
-    dt.items.add(file);
-    const yh    = document.querySelector('app-router').shadowRoot
-      .querySelector('home-page').shadowRoot
-      .querySelector('year-header');
-    const input = yh.shadowRoot.querySelector('#import-input');
-    Object.defineProperty(input, 'files', { value: dt.files, configurable: true });
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  }, json);
+  if (Buffer.isBuffer(content)) {
+    // Binary file (e.g. exported .youryear)
+    await page.evaluate((bytes) => {
+      const file = new File([new Uint8Array(bytes)], 'data.youryear', { type: 'application/octet-stream' });
+      const dt   = new DataTransfer();
+      dt.items.add(file);
+      const yh    = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('year-header');
+      const input = yh.shadowRoot.querySelector('#import-input');
+      Object.defineProperty(input, 'files', { value: dt.files, configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, Array.from(content));
+  } else {
+    const json = typeof content === 'string' ? content : JSON.stringify(content);
+    await page.evaluate((json) => {
+      const file = new File([json], 'export.json', { type: 'application/json' });
+      const dt   = new DataTransfer();
+      dt.items.add(file);
+      const yh    = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('year-header');
+      const input = yh.shadowRoot.querySelector('#import-input');
+      Object.defineProperty(input, 'files', { value: dt.files, configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, json);
+  }
 }
 
 async function confirmDialogState(page) {
@@ -186,7 +201,7 @@ test.describe('Sync — export', () => {
         await clickInYearHeader(page, '#export-year-btn');
       })(),
     ]);
-    expect(download.suggestedFilename()).toMatch(/^\d{12}_youryear-\d{4}\.json$/);
+    expect(download.suggestedFilename()).toMatch(/^\d{12}_youryear-\d{4}\.youryear$/);
   });
 
   test('Export all years triggers a file download', async ({ page }) => {
@@ -197,10 +212,10 @@ test.describe('Sync — export', () => {
         await clickInYearHeader(page, '#export-all-btn');
       })(),
     ]);
-    expect(download.suggestedFilename()).toMatch(/^\d{12}_youryear-all\.json$/);
+    expect(download.suggestedFilename()).toMatch(/^\d{12}_youryear-all\.youryear$/);
   });
 
-  test('exported file contains valid JSON with socleVersion 1', async ({ page }) => {
+  test('exported file starts with SCLE magic bytes', async ({ page }) => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
@@ -210,14 +225,18 @@ test.describe('Sync — export', () => {
     ]);
     const tmpPath = path.join(os.tmpdir(), download.suggestedFilename());
     await download.saveAs(tmpPath);
-    const content = JSON.parse(fs.readFileSync(tmpPath, 'utf8'));
-    expect(content.socleVersion).toBe(1);
-    expect(Array.isArray(content.events)).toBe(true);
-    expect(Array.isArray(content.images)).toBe(true);
+    const bytes = fs.readFileSync(tmpPath);
+    // First 4 bytes: SCLE (uncompressed magic), then gzip payload starts at byte 4
+    expect(bytes[0]).toBe(0x53); // S
+    expect(bytes[1]).toBe(0x43); // C
+    expect(bytes[2]).toBe(0x4c); // L
+    expect(bytes[3]).toBe(0x45); // E
+    expect(bytes[4]).toBe(0x1f); // gzip magic
+    expect(bytes[5]).toBe(0x8b);
     fs.unlinkSync(tmpPath);
   });
 
-  test('year-scoped export only includes events for that year', async ({ page }) => {
+  test('year-scoped export imports only events for that year', async ({ page }) => {
     await clearIDB(page);
     await page.reload();
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
@@ -242,11 +261,27 @@ test.describe('Sync — export', () => {
     ]);
     const tmpPath = path.join(os.tmpdir(), download.suggestedFilename());
     await download.saveAs(tmpPath);
-    const content = JSON.parse(fs.readFileSync(tmpPath, 'utf8'));
+    const fileBytes = fs.readFileSync(tmpPath);
     fs.unlinkSync(tmpPath);
 
-    expect(content.events).toHaveLength(1);
-    expect(String(content.events[0].payload.year)).toBe(String(currentYear));
+    // Clear and import: only the current-year event should come in
+    await clearIDB(page);
+    await page.reload();
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+    await waitForPage(page);
+
+    await openMenu(page);
+    await clickInYearHeader(page, '#import-btn');
+    await injectImportFile(page, fileBytes);
+    await page.waitForFunction(() => {
+      const yh = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('year-header');
+      return yh.shadowRoot.querySelector('#import-confirm').open;
+    });
+    const state = await confirmDialogState(page);
+    expect(state.successHidden).toBe(false);
+    expect(state.message).toContain('1'); // 1 event added, not 2
   });
 });
 
@@ -255,6 +290,23 @@ test.describe('Sync — import', () => {
     await page.goto(`/${currentYear}`);
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
     await waitForPage(page);
+  });
+
+  test('importing a corrupted binary file shows error dialog', async ({ page }) => {
+    await openMenu(page);
+    await clickInYearHeader(page, '#import-btn');
+    // SCLE magic so readImportFile passes it as Uint8Array, but gzip payload is garbage.
+    await injectImportFile(page, Buffer.from([0x53, 0x43, 0x4c, 0x45, 0x00, 0x00, 0x00, 0x00]));
+    await page.waitForFunction(() => {
+      const yh = document.querySelector('app-router').shadowRoot
+        .querySelector('home-page').shadowRoot
+        .querySelector('year-header');
+      return yh.shadowRoot.querySelector('#import-confirm').open;
+    });
+    const state = await confirmDialogState(page);
+    expect(state.open).toBe(true);
+    expect(state.errorHidden).toBe(false);
+    expect(state.successHidden).toBe(true);
   });
 
   test('importing invalid JSON shows error dialog', async ({ page }) => {
@@ -387,7 +439,7 @@ test.describe('Sync — round-trip', () => {
     ]);
     const tmpPath = path.join(os.tmpdir(), download.suggestedFilename());
     await download.saveAs(tmpPath);
-    const exportedJson = fs.readFileSync(tmpPath, 'utf8');
+    const exportedBytes = fs.readFileSync(tmpPath); // binary Buffer
     fs.unlinkSync(tmpPath);
 
     // Clear IDB and reload to empty state
@@ -397,10 +449,10 @@ test.describe('Sync — round-trip', () => {
     await waitForPage(page);
     expect(await goalCount(page)).toBe(0);
 
-    // Import the exported file
+    // Import the exported binary file
     await openMenu(page);
     await clickInYearHeader(page, '#import-btn');
-    await injectImportFile(page, exportedJson);
+    await injectImportFile(page, exportedBytes);
     await page.waitForFunction(() => {
       const yh = document.querySelector('app-router').shadowRoot
         .querySelector('home-page').shadowRoot
