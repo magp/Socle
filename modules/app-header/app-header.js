@@ -41,7 +41,7 @@ class AppHeader extends AppElement {
         }
       </style>
       <header class="inner">
-        <h1 class="title"><slot></slot></h1>
+        <h1 class="title">${this.getAttribute('label') ?? ''}</h1>
         <div class="action"><slot name="action"></slot></div>
       </header>
     `;

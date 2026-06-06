@@ -20,14 +20,12 @@ describe('app-header', () => {
     expect(title).toBeTruthy();
   });
 
-  it('title h1 contains the default slot', () => {
-    const slot = el.shadowRoot.querySelector('h1.title slot:not([name])');
-    expect(slot).toBeTruthy();
-  });
-
-  it('projects slot text as title content', () => {
-    el.textContent = 'My App';
-    expect(el.textContent).toBe('My App');
+  it('renders label attribute as h1 text', () => {
+    el.remove();
+    el = document.createElement('app-header');
+    el.setAttribute('label', 'My App');
+    document.body.appendChild(el);
+    expect(el.shadowRoot.querySelector('h1.title').textContent).toBe('My App');
   });
 
   it('exposes a named action slot', () => {
