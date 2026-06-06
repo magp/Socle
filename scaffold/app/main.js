@@ -1,7 +1,7 @@
 import './strings.js';
 import { setLocale, getLocale } from '../_lib/core/strings.js';
-import { boot } from '../_lib/core/store/store.js';
-import { reducer } from './store/reducer.js';
+%%STORE_IMPORT%%
+%%REDUCER_IMPORT%%
 import '../_lib/core/router/app-router.js';
 import '../_lib/core/sw-manager/sw-manager.js';
 import '../_lib/core/components/update-banner/update-banner.js';
@@ -13,7 +13,7 @@ import './pages/not-found-page.js';
 
 setLocale(getLocale());
 
-await boot({ dbName: '%%APP_NAME%%', reducer });
+%%STORE_BOOT%%
 
 console.log('%%APP_NAME%%', __APP_VERSION__);
 

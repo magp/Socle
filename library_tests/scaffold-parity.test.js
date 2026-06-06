@@ -41,16 +41,30 @@ describe('scaffold/utils/build.js', () => {
 // ─── app/main.js ─────────────────────────────────────────────────────────────
 
 describe('scaffold/app/main.js', () => {
-  it('awaits boot() before router setup', () => {
+  it('has %%STORE_BOOT%% token before router setup', () => {
     const src = read(scaffold, 'app/main.js');
-    const bootPos = src.indexOf('await boot(');
+    const bootPos = src.indexOf('%%STORE_BOOT%%');
     const routerPos = src.indexOf('router.routes');
     expect(bootPos).toBeGreaterThan(-1);
     expect(bootPos).toBeLessThan(routerPos);
   });
 
-  it('imports reducer from ./store/reducer.js', () => {
-    expect(read(scaffold, 'app/main.js')).toContain("from './store/reducer.js'");
+  it('has %%STORE_IMPORT%% and %%REDUCER_IMPORT%% tokens', () => {
+    const src = read(scaffold, 'app/main.js');
+    expect(src).toContain('%%STORE_IMPORT%%');
+    expect(src).toContain('%%REDUCER_IMPORT%%');
+  });
+});
+
+// ─── app/pages/home-page.js ──────────────────────────────────────────────────
+
+describe('scaffold/app/pages/home-page.js', () => {
+  it('does not call Store.dispatch (dispatch is event-log-only; home-page is store-agnostic)', () => {
+    expect(read(scaffold, 'app/pages/home-page.js')).not.toContain('Store.dispatch');
+  });
+
+  it('does not hardcode a store import (store path differs between event-log and simple store)', () => {
+    expect(read(scaffold, 'app/pages/home-page.js')).not.toContain("from '../../_lib/core/store/store");
   });
 });
 

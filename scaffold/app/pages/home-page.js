@@ -2,7 +2,6 @@
 %%HP_GESTURE_IMPORT%%
 %%HP_IMAGES_IMPORT%%
 import { AppElement } from '../../_lib/core/app-element.js';
-import * as Store from '../../_lib/core/store/store.js';
 
 class HomePage extends AppElement {
   template() {
@@ -280,8 +279,6 @@ class HomePage extends AppElement {
     const sr = this.shadowRoot;
 
     this._onSubmit = () => {
-      const value = sr.querySelector('#entry-input').value.trim();
-      Store.dispatch('demo:entry-added', { value });
 %%HP_TOAST_DISPATCH%%
     };
     sr.querySelector('#submit-btn').addEventListener('click', this._onSubmit);

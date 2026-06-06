@@ -1,4 +1,5 @@
 {
+  "id": "/%%APP_ID%%",
   "name": "%%APP_NAME%%",
   "short_name": "%%APP_SHORT_NAME%%",
   "description": "%%APP_DESCRIPTION%%",
