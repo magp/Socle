@@ -153,14 +153,13 @@ npm run dev:https    # mobile — https://localhost:3000 + https://<LAN-IP>:3000
 
 Service workers only register on HTTPS or `localhost`. Always use `dev:https` when testing offline mode or SW behaviour on a real device.
 
-**HTTPS cert setup (one-time per machine):**
+`dev:https` is not included by default. Add it once per project (requires [mkcert](https://github.com/FiloSottile/mkcert)):
+
 ```bash
-brew install mkcert && mkcert -install
-mkcert localhost <LAN-IP>   # creates localhost+1.pem and localhost+1-key.pem in the project root
+npx socle cert
 ```
 
-**Android CA trust (one-time per device):**
-`mkcert -CAROOT` → copy `rootCA.pem` to device → Settings → Security → Install certificate → CA certificate.
+This prompts for shared (`~/.socle-certs/`, reused across projects) or project-specific certs, runs `mkcert`, and adds the `dev:https` script to `package.json`. The Android CA install walkthrough runs automatically if you enter a LAN IP.
 
 **Testing offline:**
 1. Start `npm run dev:https`

@@ -366,7 +366,7 @@ The sync module works with both stores. For the simple store, `exportData()` ser
 #### Boot
 
 ```js
-import { boot } from '../_lib/core/store/store.js';
+import { boot } from '../_lib/core/store/store-simple.js';
 
 await boot({ dbName: 'my-app', initialState: { items: [] } });
 ```
@@ -383,7 +383,7 @@ await boot({ dbName: 'my-app', initialState: { items: [] } });
 #### setState
 
 ```js
-import { setState } from '../_lib/core/store/store.js';
+import { setState } from '../_lib/core/store/store-simple.js';
 
 setState('items', [...currentItems, newItem]);
 ```

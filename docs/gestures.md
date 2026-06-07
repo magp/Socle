@@ -183,7 +183,7 @@ onHoldDragEnd(e) {
 
 `touch-action: none` is set — hold-drag takes full control of the pointer, no native scroll.
 
-**Note on haptics:** `navigator.vibrate()` works reliably only on `onHoldDragStart` (fired from a `setTimeout`, not a direct pointer event). Chrome requires the call be triggered by user activation; Firefox has removed the API entirely. Only call it in `onHoldDragStart`.
+**Note on haptics:** the library calls `navigator.vibrate?.(40)` automatically on hold-drag activation. Do not call it from app code — it will double-fire.
 
 ## Gesture event object
 
@@ -228,7 +228,26 @@ These rules apply within a single pointer-down sequence:
 
 ## Keyboard alternatives
 
-Every gesture must have a keyboard equivalent. The gesture handlers are plain methods — call them directly from a `keydown` listener.
+Every gesture must have a keyboard equivalent.
+
+### Hold-drag — automatic
+
+If you define `onHoldDragKey(direction)`, the mixin wires `ArrowLeft` and `ArrowRight` automatically. The direction argument is `'left'` or `'right'`. Keyboard parity is also wired by `Gestures.attach` for child elements — it additionally sets `tabindex="0"` on the target if one is not already set.
+
+```js
+class GoalItem extends Gestures(AppElement) {
+  onHoldDragKey(direction) {
+    const delta = direction === 'right' ? 5 : -5;
+    this._setCompletion(Math.max(0, Math.min(100, this._pct + delta)));
+  }
+}
+```
+
+The key handler uses `composedPath()` to guard against shadow DOM children triggering it — only focus on the host element fires the handler.
+
+### Tap, swipe — manual
+
+For tap and swipe, wire a `keydown` listener from `subscribe()`:
 
 ```js
 subscribe() {
@@ -239,12 +258,6 @@ subscribe() {
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       this._arm('left');
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      this._arm('right');
-    } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      e.preventDefault();
-      this._dispatchDelete();
     }
   };
   this.addEventListener('keydown', this._onKeyDown);
@@ -254,8 +267,6 @@ unsubscribe() {
   this.removeEventListener('keydown', this._onKeyDown);
 }
 ```
-
-For slider-like hold-drag interactions, the progress bar should have `role="slider"` and respond to Arrow keys for stepwise changes — the keyboard path replaces the drag gesture, not just triggers it.
 
 ## Testing components with gestures
 
@@ -297,6 +308,7 @@ Detects defined handlers at `connectedCallback`. Wires pointer events only for t
 | `onHoldDragStart(e)` | After 500ms stationary contact — begins hold-drag phase |
 | `onHoldDrag(e)` | Each pointermove after hold committed |
 | `onHoldDragEnd(e)` | Pointerup or pointercancel after hold committed |
+| `onHoldDragKey(direction)` | ArrowLeft/ArrowRight key on the host element — `direction` is `'left'` or `'right'` |
 
 ---
 

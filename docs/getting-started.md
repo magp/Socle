@@ -27,7 +27,7 @@ iOS Safari is not supported. Direct users to install Firefox.
 ## Scaffold a new app
 
 ```bash
-npx socle my-app
+npx github:magp/Socle my-app
 ```
 
 The CLI prompts for your app name and which optional modules to include, then creates `./my-app/` with everything wired up.

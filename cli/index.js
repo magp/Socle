@@ -803,7 +803,7 @@ export function ensureDevHttps(pkgPath) {
 async function runCert() {
   const pkgPath = path.join(process.cwd(), 'package.json');
   if (!fs.existsSync(pkgPath)) {
-    console.error('No package.json found. Run npx socle cert from your project root.');
+    console.error('No package.json found. Run socle cert from your project root.');
     process.exit(1);
   }
 

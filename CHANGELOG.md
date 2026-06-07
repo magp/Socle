@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.9.0] — 2026-06-07
+
 ### Added
 - `core/store/store-simple.js` — simple state store: plain object snapshot persisted to IDB on every `setState` call, no event log, no reducer, no migrations. Selected at scaffold time via CLI. Implements the same `subscribe`/`unsubscribe`/`getState`/`attachBlob`/`getBlob`/`deleteBlob`/`reset` API as the event-log store plus sync-compatible `getAllEvents`/`getAllBlobs`/`importEvents` methods so the sync module works with both stores.
 - `modules/sync/` — binary export/import format: SCLE magic (4 bytes, uncompressed) + gzip-compressed payload containing events JSON and raw image bytes. Replaces the previous JSON format. ~33% smaller than base64 JSON; peak import memory holds one image at a time instead of all. Legacy `.json` exports remain importable — format is detected by magic bytes.
