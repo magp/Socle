@@ -28,7 +28,6 @@ const REQUIRED = [
   ['manifest.json',           '%%BASE_PATH%%'],
   ['package.json',            '%%APP_NAME%%'],
   ['package.json',            '%%PORT%%'],
-  ['playwright.config.js',   '%%PORT%%'],
   ['app/main.js',             '%%APP_NAME%%'],
   ['app/main.js',             '%%APP_HEADER_IMPORT%%'],
   ['app/main.js',             '%%MODAL_IMPORT%%'],

@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.2] — 2026-06-08
+
+### Fixed
+- `scaffold/playwright.config.js` — hardcode test server port to 4321 (matching the reference app) instead of `%%PORT%%`. Using the dev server port for E2E tests caused a port conflict when the dev server was already running.
+
+---
+
 ## [0.9.1] — 2026-06-08
 
 ### Fixed
