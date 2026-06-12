@@ -360,6 +360,8 @@ function buildTokenMap(options) {
     LANG:            'en',
     GITHUB_USER:     githubUser,
     PORT:            String(port),
+    THEME_COLOR_LIGHT: '#F5F2EE',
+    THEME_COLOR_DARK:  '#1C1C1E',
     IMAGES_IMPORT:   includeImages ? "import './pages/images-page.js';" : '',
     IMAGES_ROUTE:    includeImages ? "  { path: '/images', component: 'images-page' }," : '',
     STORE_IMPORT:    "import { boot } from '../_lib/core/store/store.js';",

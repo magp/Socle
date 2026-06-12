@@ -2,6 +2,7 @@
 %%HP_GESTURE_IMPORT%%
 %%HP_IMAGES_IMPORT%%
 import { AppElement } from '../../_lib/core/app-element.js';
+import { setTheme, getTheme } from '../../_lib/core/theme/theme.js';
 
 class HomePage extends AppElement {
   template() {
@@ -243,6 +244,22 @@ class HomePage extends AppElement {
             </label>
           </fieldset>
 
+          <fieldset>
+            <legend>Theme</legend>
+            <label class="radio-label">
+              <input type="radio" name="theme" value="system" />
+              System
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="theme" value="light" />
+              Light
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="theme" value="dark" />
+              Dark
+            </label>
+          </fieldset>
+
           <label class="toggle-label">
             <input type="checkbox" id="notify-toggle" />
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
@@ -283,6 +300,13 @@ class HomePage extends AppElement {
     };
     sr.querySelector('#submit-btn').addEventListener('click', this._onSubmit);
 
+    this._onTheme = e => setTheme(e.target.value);
+    this._themeInputs = [...sr.querySelectorAll('[name="theme"]')];
+    this._themeInputs.forEach(input => {
+      if (input.value === getTheme()) input.checked = true;
+      input.addEventListener('change', this._onTheme);
+    });
+
 %%HP_MODAL_SUBSCRIBE%%
 %%HP_GESTURE_SUBSCRIBE%%
 %%HP_SYNC_SUBSCRIBE%%
@@ -300,6 +324,7 @@ class HomePage extends AppElement {
   unsubscribe() {
     const sr = this.shadowRoot;
     sr.querySelector('#submit-btn')?.removeEventListener('click', this._onSubmit);
+    this._themeInputs?.forEach(input => input.removeEventListener('change', this._onTheme));
 %%HP_MODAL_UNSUBSCRIBE%%
 %%HP_GESTURE_UNSUBSCRIBE%%
 %%HP_SYNC_UNSUBSCRIBE%%

@@ -21,6 +21,8 @@ const REQUIRED = [
   ['index.html',              '%%APP_NAME%%'],
   ['index.html',              '%%MAIN_JS%%'],
   ['index.html',              '%%APP_HEADER_ELEMENT%%'],
+  ['index.html',              '%%THEME_COLOR_LIGHT%%'],
+  ['index.html',              '%%THEME_COLOR_DARK%%'],
   ['manifest.json',           '%%APP_NAME%%'],
   ['manifest.json',           '%%APP_SHORT_NAME%%'],
   ['manifest.json',           '%%APP_DESCRIPTION%%'],

@@ -1,6 +1,7 @@
 import { AppElement } from '../../../_lib/core/app-element.js';
 import { Gestures } from '../../../_lib/modules/gestures/gestures.js';
 import { t, setLocale, getLocale } from '../../../_lib/core/strings.js';
+import { setTheme, getTheme } from '../../../_lib/core/theme/theme.js';
 import * as Store from '../../../_lib/core/store/store.js';
 import { exportData, importData, downloadExport, readImportFile } from '../../../_lib/modules/sync/sync.js';
 import { compressImage } from '../../../_lib/modules/images/images.js';
@@ -30,8 +31,8 @@ class YearHeader extends Gestures(AppElement) {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .menu-sheet { animation: none; }
-          .header-img { animation: none; }
+          dialog[open]     { animation: none; }
+          dialog::backdrop { animation: none; }
         }
 
         :host {
@@ -389,10 +390,10 @@ class YearHeader extends Gestures(AppElement) {
           <span class="menu-item-value">↓</span>
         </button>
         <p class="menu-section-label">${t('year-header.app-section')}</p>
-        <div class="menu-item muted">
+        <button class="menu-item" id="theme-btn">
           <span>${t('year-header.theme')}</span>
-          <span class="badge">${t('year-header.theme-soon')}</span>
-        </div>
+          <span class="menu-item-value" id="theme-value">${t('year-header.theme-' + getTheme())}</span>
+        </button>
         <button class="menu-item" id="language-btn">
           <span>${t('year-header.language')}</span>
           <span class="menu-item-value">${LOCALE_LABELS[getLocale()]} ›</span>
@@ -428,6 +429,18 @@ class YearHeader extends Gestures(AppElement) {
           const active = getLocale() === locale;
           return `<button class="menu-item" data-locale="${locale}">
             <span>${LOCALE_LABELS[locale]}</span>
+            ${active ? `<span class="badge selected">✓</span>` : ''}
+          </button>`;
+        }).join('')}
+      </dialog>
+
+      <dialog id="theme-sheet">
+        <div class="menu-handle"></div>
+        <p class="menu-section-label">${t('year-header.theme')}</p>
+        ${['system', 'light', 'dark'].map(v => {
+          const active = getTheme() === v;
+          return `<button class="menu-item" data-theme-value="${v}">
+            <span>${t('year-header.theme-' + v)}</span>
             ${active ? `<span class="badge selected">✓</span>` : ''}
           </button>`;
         }).join('')}
@@ -614,6 +627,29 @@ class YearHeader extends Gestures(AppElement) {
       }
     };
     this._langDialog.addEventListener('click', this._onLangSelect);
+
+    // Theme
+    this._themeSheet = this.shadowRoot.querySelector('#theme-sheet');
+
+    this._onThemeBtn = () => {
+      this._menuDialog.close();
+      this._themeSheet.showModal();
+    };
+    this.shadowRoot.querySelector('#theme-btn').addEventListener('click', this._onThemeBtn);
+
+    this._onThemeSheetBackdrop = e => {
+      if (e.target === this._themeSheet) this._themeSheet.close();
+    };
+    this._themeSheet.addEventListener('click', this._onThemeSheetBackdrop);
+
+    this._onThemeSelect = e => {
+      const btn = e.target.closest('[data-theme-value]');
+      if (!btn || btn.dataset.themeValue === getTheme()) return;
+      setTheme(btn.dataset.themeValue);
+      this._themeSheet.close();
+      this._updateThemeBtn();
+    };
+    this._themeSheet.addEventListener('click', this._onThemeSelect);
   }
 
   unsubscribe() {
@@ -642,6 +678,9 @@ class YearHeader extends Gestures(AppElement) {
     this.shadowRoot.querySelector('#language-btn')?.removeEventListener('click', this._onLanguageBtn);
     this._langDialog?.removeEventListener('click', this._onLangBackdrop);
     this._langDialog?.removeEventListener('click', this._onLangSelect);
+    this.shadowRoot.querySelector('#theme-btn')?.removeEventListener('click', this._onThemeBtn);
+    this._themeSheet?.removeEventListener('click', this._onThemeSheetBackdrop);
+    this._themeSheet?.removeEventListener('click', this._onThemeSelect);
     window.removeEventListener('scroll', this._onScroll);
   }
 
@@ -685,6 +724,11 @@ class YearHeader extends Gestures(AppElement) {
     this.removeAttribute('data-has-image');
     document.documentElement.style.removeProperty('--year-header-height');
     this._updatePhotoMenu(false);
+  }
+
+  _updateThemeBtn() {
+    const val = this.shadowRoot?.querySelector('#theme-value');
+    if (val) val.textContent = t('year-header.theme-' + getTheme());
   }
 
   _updatePhotoMenu(hasImage) {

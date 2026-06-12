@@ -1,3 +1,4 @@
+import { initTheme } from '../_lib/core/theme/theme.js';
 import './strings.js';
 import { setLocale, getLocale } from '../_lib/core/strings.js';
 %%STORE_IMPORT%%
@@ -11,6 +12,7 @@ import './pages/home-page.js';
 import './pages/not-found-page.js';
 %%IMAGES_IMPORT%%
 
+initTheme();
 setLocale(getLocale());
 
 %%STORE_BOOT%%

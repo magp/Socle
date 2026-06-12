@@ -1,3 +1,4 @@
+import { initTheme } from '../_lib/core/theme/theme.js';
 import './strings.js';
 import './locales/fr.js';
 import './locales/ca.js';
@@ -11,6 +12,7 @@ import './pages/year-redirect.js';
 import './pages/home-page.js';
 import './pages/not-found-page.js';
 
+initTheme();
 setLocale(getLocale());
 
 await boot({ dbName: 'youryear', reducer });
