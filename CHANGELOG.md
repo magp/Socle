@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.9.3] — 2026-06-12
+
 ### Added
 - `core/theme/theme.js` — dark/light/system theme utility: `initTheme()`, `setTheme()`, `getTheme()`, `onThemeChange()`. Call `initTheme()` once in `app/main.js` before `boot()`. Reads `localStorage` for a persisted preference, falls back to `prefers-color-scheme`. System mode reacts to OS changes at runtime.
 - `core/styles/tokens.css` — `[data-theme="dark"]` block with a full warm-dark palette. All colour tokens are automatically overridden; no component changes required. `color-scheme: light dark` added to `:root` so native controls (scrollbars, date pickers) adapt to the active theme.

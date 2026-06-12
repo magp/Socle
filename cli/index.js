@@ -549,6 +549,16 @@ export async function updateLib(projectDir, ask) {
 
   // ── version migrations ──────────────────────────────────────────────────────
   // v0.9.1 — no app-layer migration required (store rename fix is automated above)
+  if (_semverLt(current.version, '0.9.3')) {
+    console.log('\n  ── Theme system (manual steps required) ──');
+    console.log('  1. app/main.js — add at the top:');
+    console.log("       import { initTheme } from './_lib/core/theme/theme.js';");
+    console.log('     Then call initTheme() as the first statement (before setLocale and boot).');
+    console.log('  2. index.html — replace the single <meta name="theme-color"> with:');
+    console.log('       <meta name="theme-color" content="#F5F2EE" media="(prefers-color-scheme: light)" />');
+    console.log('       <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)" />');
+    console.log('     Then add the anti-FOUC inline script — see CHANGELOG.md for the snippet.');
+  }
   // ── end migrations ──────────────────────────────────────────────────────────
 
   fs.writeFileSync(libVersionPath, JSON.stringify({ ...current, version: latest }, null, 2) + '\n');
