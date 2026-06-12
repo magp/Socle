@@ -547,10 +547,56 @@ export async function updateLib(projectDir, ask) {
 
   if (preservedAccent) patchAccentColor(tokensPath, preservedAccent);
 
+  // ── utils/build.js ──────────────────────────────────────────────────────────
+  const utilsBuildSrc  = path.join(ROOT, 'scaffold', 'utils', 'build.js');
+  const utilsBuildDest = path.join(projectDir, 'utils', 'build.js');
+  let utilsUpdated = false;
+  if (fs.existsSync(utilsBuildDest)) {
+    let skipUtils = false;
+    try {
+      const utilsModified = execSync('git diff --name-only utils/build.js', { cwd: projectDir, stdio: ['pipe', 'pipe', 'pipe'] })
+        .toString().trim();
+      if (utilsModified) {
+        console.log('\n  utils/build.js has local modifications.');
+        const answer = await ask('  Overwrite with library version? [y/N]: ');
+        if (!answer.trim().toLowerCase().startsWith('y')) skipUtils = true;
+      }
+    } catch { /* git unavailable — proceed */ }
+    if (!skipUtils) {
+      fs.copyFileSync(utilsBuildSrc, utilsBuildDest);
+      utilsUpdated = true;
+      console.log('  ✔ utils/build.js updated');
+    }
+  }
+
+  // ── package.json devDependencies ────────────────────────────────────────────
+  const scaffoldPkg  = JSON.parse(fs.readFileSync(path.join(ROOT, 'scaffold', 'package.json'), 'utf8'));
+  const projectPkgPath = path.join(projectDir, 'package.json');
+  const projectPkg   = JSON.parse(fs.readFileSync(projectPkgPath, 'utf8'));
+  const projectDeps  = projectPkg.devDependencies ?? {};
+  const depsAdded    = [];
+  const depsChanged  = [];
+  for (const [pkg, ver] of Object.entries(scaffoldPkg.devDependencies)) {
+    if (!projectDeps[pkg])              depsAdded.push(`  + ${pkg}: ${ver}`);
+    else if (projectDeps[pkg] !== ver)  depsChanged.push(`  ~ ${pkg}: ${projectDeps[pkg]} → ${ver}`);
+  }
+  let depsUpdated = false;
+  if (depsAdded.length || depsChanged.length) {
+    console.log('\n  package.json devDependencies:');
+    [...depsAdded, ...depsChanged].forEach(l => console.log(l));
+    const answer = await ask('  Apply these changes? [y/N]: ');
+    if (answer.trim().toLowerCase().startsWith('y')) {
+      projectPkg.devDependencies = { ...projectDeps, ...scaffoldPkg.devDependencies };
+      fs.writeFileSync(projectPkgPath, JSON.stringify(projectPkg, null, 2) + '\n');
+      depsUpdated = true;
+      console.log('  ✔ package.json devDependencies updated');
+    }
+  }
+
   // ── version migrations ──────────────────────────────────────────────────────
   // v0.9.1 — no app-layer migration required (store rename fix is automated above)
   if (_semverLt(current.version, '0.9.3')) {
-    console.log('\n  ── Theme system (manual steps required) ──');
+    console.log('\n  ── Theme system and build (manual steps required) ──');
     console.log('  1. app/main.js — add at the top:');
     console.log("       import { initTheme } from './_lib/core/theme/theme.js';");
     console.log('     Then call initTheme() as the first statement (before setLocale and boot).');
@@ -558,14 +604,18 @@ export async function updateLib(projectDir, ask) {
     console.log('       <meta name="theme-color" content="#F5F2EE" media="(prefers-color-scheme: light)" />');
     console.log('       <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)" />');
     console.log('     Then add the anti-FOUC inline script — see CHANGELOG.md for the snippet.');
+    if (depsUpdated) console.log('  3. Run: npm install   (adds esbuild for the new build pipeline)');
   }
   // ── end migrations ──────────────────────────────────────────────────────────
 
   fs.writeFileSync(libVersionPath, JSON.stringify({ ...current, version: latest }, null, 2) + '\n');
   console.log(`  ✔ lib-version.json updated to ${latest}`);
 
+  const stagedFiles = ['_lib/', utilsUpdated && 'utils/build.js', depsUpdated && 'package.json']
+    .filter(Boolean).join(' ');
   console.log(`\nDone. Review the changelog, then commit:`);
-  console.log(`  git add _lib/ && git commit -m "chore: update socle to ${latest}"`);
+  console.log(`  git add ${stagedFiles} && git commit -m "chore: update socle to ${latest}"`);
+  if (depsUpdated) console.log('  npm install');
 }
 
 // ── addModule (exported for tests) ───────────────────────────────────────────

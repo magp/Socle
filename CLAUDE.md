@@ -101,7 +101,7 @@ my-app/
     unit/                   ← Vitest unit tests
     e2e/                    ← Playwright E2E tests
   utils/
-    build.js                ← edit if custom build behaviour is needed
+    build.js                ← library-owned, never edit; updated via socle update
   .github/
     workflows/
       deploy.yml            ← auto-deploys dist/ to GitHub Pages on push to main
@@ -117,16 +117,17 @@ my-app/
 
 ### Build Stack
 
-- **No bundler.** ES modules served directly.
-- **Minimal build script** at `utils/build.js` (plain Node.js, no build framework) that:
-  - Stamps asset filenames with a content hash
-  - Generates `version.json`
-  - Enumerates all files under `_lib/` and `app/` to build the SW pre-cache asset list. Follows symlinks via `statSync` — required because reference-app's `_lib/core` and `_lib/modules` are symlinks; the dereferenced copies in `dist/` are real files.
-  - Reads `_lib/core/sw.js` and injects `CACHE_VERSION` + full asset list → `dist/sw.js`. The `CACHE_VERSION` hash includes `manifest.json` and `index.html` in addition to `main.js` and all files under `_lib/` and `app/` — changes to the manifest or HTML shell automatically invalidate the cache and trigger the SW update flow. Omitting either file from the hash means manifest/theme_color changes produce an identical SW and are never picked up by the update mechanism.
-  - Replaces `__APP_VERSION__` token in `app/main.js` → hashed output in `dist/`
-  - Rewrites import paths in `main.js` for the `dist/` layout: `'../_lib/` → `'./_lib/`, and all other app-relative imports (`'./anything`) → `'./app/anything` using the regex `/'\.\/(?!_lib\/)/g` — catches any new app-relative imports automatically without needing to add new rules per directory
-  - Copies `_lib/` and `app/` into `dist/` so the output is self-contained — ES modules resolve relative imports at runtime with no bundler, so everything they reference must be physically present in `dist/`. Uses `dereference: true` so the reference-app's symlinked `_lib/` is copied as real files; harmless no-op in scaffolded apps where `_lib/` is already real files
+- **esbuild** bundles and minifies `app/main.js` and all `_lib/` imports into a single hashed ESM file with a source map. Tree-shaking is automatic.
+- **`utils/build.js`** (plain Node.js, uses esbuild API) runs the full build pipeline:
+  - Bundles `app/main.js` (esbuild `bundle: true, minify: true, format: 'esm'`). `__APP_VERSION__` is substituted at bundle time via esbuild `define`.
+  - Content-hashes the bundle → `dist/main.{hash}.js` + `dist/main.{hash}.js.map`
+  - Generates `dist/version.json`
+  - Inlines `_lib/core/styles/tokens.css` into `index.html` as a `<style>` block (replaces the `<link>` tag) — eliminates a render-blocking network request
+  - Injects `CACHE_VERSION`, `BASE_PATH`, and a slim asset list (bundle + manifest + icons — no `_lib/` or `app/` module files) into `sw.js`. `CACHE_VERSION` is hashed from bundle + tokens + manifest + index.html so any change to any of them invalidates the SW cache.
+  - Writes `dist/manifest.json` and copies `app/icons/`
+  - `dist/` is cleaned at the start of every build (`rmSync`)
   - Accepts `BASE_PATH` env var (default `/`) for GitHub Pages subdirectory deployments
+- `dist/` contains only: `main.{hash}.js`, `main.{hash}.js.map`, `sw.js`, `version.json`, `index.html`, `manifest.json`, `app/icons/`. No `_lib/` or `app/` JS directories — everything is bundled.
 - **Vitest** for unit tests
 - **Playwright** for E2E tests
 
@@ -346,13 +347,18 @@ This is the contract between the library and the user project. The update comman
 
 ### Update flow (CLI command: `npx socle update`)
 
+**Ownership model:** `_lib/` and `utils/` are library-owned and updated automatically. `app/`, `index.html`, `manifest.json`, and `package.json` name/version/scripts are developer-owned and never touched.
+
 1. Read `_lib/lib-version.json` for current version and installed modules
 2. Compare against the CLI's own version — if equal, print "already up to date" and exit
 3. Run `git diff --name-only _lib/` — if any `_lib/` files are locally modified, list them and ask for explicit confirmation before overwriting. Never silently overwrite modified files.
 4. Read the current `--color-accent` value from `_lib/core/styles/tokens.css` and preserve it.
 5. Replace `_lib/core/` and each installed module. `app/` is never touched.
 6. Re-apply the preserved accent colour to the updated `tokens.css`.
-7. Update `lib-version.json` version field.
+7. Replace `utils/build.js` with the library version. If it has local modifications, show a warning and ask for confirmation before overwriting.
+8. Sync `package.json` devDependencies — show added/changed packages and ask for confirmation. Never touches `name`, `version`, `scripts`, or any other field.
+9. Update `lib-version.json` version field.
+10. Print a commit command and `npm install` reminder if devDependencies changed.
 
 ### Adding and removing modules (CLI commands: `npx socle add` / `npx socle remove`)
 
@@ -449,6 +455,7 @@ Four distinct test scopes — do not mix them:
 - `tests/unit/` and `tests/e2e/` scaffolded with working Vitest + Playwright configs
 - App developers extend these — they never configure the test infrastructure from scratch
 - `scaffold/tests/` is excluded from the monorepo `vitest.config.js` — these are templates, not runnable tests
+- `vitest.config.js` `include` pattern covers both `tests/unit/**/*.test.js` and `_lib/**/*.test.js` — library unit tests run in the scaffolded app automatically. This means app-layer changes that break `_lib/` internals are caught at test time, not after a deploy. The build excludes `*.test.js` files from `dist/`.
 
 **IDB and DOM environments:**
 - `fake-indexeddb` provides the `indexedDB` global in Node/test environments. Loaded once via `core/test-setup.js` → `setupFiles` in `vitest.config.js`. Never mock IDB — run against `fake-indexeddb` instead.
