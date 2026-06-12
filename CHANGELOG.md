@@ -8,6 +8,46 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `core/theme/theme.js` — dark/light/system theme utility: `initTheme()`, `setTheme()`, `getTheme()`, `onThemeChange()`. Call `initTheme()` once in `app/main.js` before `boot()`. Reads `localStorage` for a persisted preference, falls back to `prefers-color-scheme`. System mode reacts to OS changes at runtime.
+- `core/styles/tokens.css` — `[data-theme="dark"]` block with a full warm-dark palette. All colour tokens are automatically overridden; no component changes required. `color-scheme: light dark` added to `:root` so native controls (scrollbars, date pickers) adapt to the active theme.
+- `scaffold/index.html`, `reference-app/index.html` — anti-FOUC inline script in `<head>` that sets `data-theme` synchronously before the first paint, eliminating a light flash when loading in dark mode. Two `<meta name="theme-color">` tags with `media` attributes replace the single tag so the browser chrome matches the active OS preference.
+- `scaffold/app/main.js` — `initTheme()` call (first call in `main.js`, before `setLocale` and `boot`).
+- `cli/index.js` — `THEME_COLOR_LIGHT` (`#F5F2EE`) and `THEME_COLOR_DARK` (`#1C1C1E`) added to `buildTokenMap`; used by the scaffold to populate `<meta name="theme-color">` tags with the correct default values.
+- `library_tests/scaffold-tokens.test.js` — `%%THEME_COLOR_LIGHT%%` and `%%THEME_COLOR_DARK%%` added to required-placeholder list.
+- `reference-app/app/components/year-header/` — theme picker: new sheet accessible from the app menu with System / Light / Dark options, current preference shown inline. Uses `onThemeChange` to keep the label in sync.
+- `reference-app/tests/e2e/theme.spec.js` — 7 E2E tests: initial load, dark/light switch, label update, persistence across reload, FOUC prevention, system fallback.
+- `core/theme/theme.test.js` — 18 unit tests covering all exported functions, OS change listener, idempotent init, and listener subscribe/unsubscribe.
+
+### Fixed
+- `reference-app/app/components/year-header/year-header.js` — `@media (prefers-reduced-motion: reduce)` block was targeting `.menu-sheet` and `.header-img`, neither of which exists in the component. Corrected to `dialog[open]` and `dialog::backdrop` where the animations are actually defined.
+
+### Migration notes (for projects upgrading via `npx socle update`)
+`_lib/core/theme/theme.js` and the dark token block in `tokens.css` are applied automatically by the update command. Two manual steps are required to activate the feature:
+
+1. **`app/main.js`** — add at the top:
+   ```js
+   import { initTheme } from './_lib/core/theme/theme.js';
+   ```
+   Then call `initTheme()` as the first statement in the file (before `setLocale` and `boot`).
+
+2. **`index.html`** — replace the single `<meta name="theme-color">` tag with:
+   ```html
+   <meta name="theme-color" content="#F5F2EE" media="(prefers-color-scheme: light)" />
+   <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)" />
+   ```
+   And add this inline script immediately after, still in `<head>`:
+   ```html
+   <script>
+     (function() {
+       var t = localStorage.getItem('theme');
+       var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+     })();
+   </script>
+   ```
+   Without this script the app works but flashes the light theme briefly on hard reload in dark mode.
+
 ---
 
 ## [0.9.2] — 2026-06-08
