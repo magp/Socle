@@ -87,7 +87,11 @@ writeFileSync(join(dist, 'index.html'), indexProcessed);
 writeFileSync(join(dist, 'manifest.json'), manifestContent.replaceAll('%%BASE_PATH%%', BASE_PATH));
 
 // 6. Copy _lib/ to dist/_lib/ — dereference symlinks so dist/ is self-contained
-cpSync(join(root, '_lib'), join(dist, '_lib'), { recursive: true, dereference: true });
+cpSync(join(root, '_lib'), join(dist, '_lib'), {
+  recursive: true,
+  dereference: true,
+  filter: src => !src.endsWith('.test.js') && !src.endsWith('test-setup.js'),
+});
 
 // 7. Copy app/ to dist/app/ — page components needed by dist/main.*.js imports
 cpSync(join(root, 'app'), join(dist, 'app'), { recursive: true });
