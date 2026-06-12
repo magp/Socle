@@ -27,7 +27,7 @@ iOS Safari is not supported. Direct users to install Firefox.
 ## Scaffold a new app
 
 ```bash
-npx github:magp/Socle my-app
+npx github:elforn/socle my-app
 ```
 
 The CLI prompts for your app name and which optional modules to include, then creates `./my-app/` with everything wired up.
@@ -329,4 +329,4 @@ See [updating.md](updating.md) for full details on each command.
 
 ---
 
-[← Back to README](../README.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Architecture →](architecture.md)
+[← Back to README](../README.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Architecture →](architecture.md)

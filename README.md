@@ -1,6 +1,6 @@
 # Socle
 
-Build Offline Mobile Apps
+Build Offline Mobile Apps — [elforn.github.io/Socle](https://elforn.github.io/Socle/)
 
 A code generator for offline-first, mobile-first PWAs with no runtime dependencies.
 
@@ -22,7 +22,7 @@ You run the CLI, choose your modules, and get a project where you own every line
 The CLI is not yet published to npm. Run it directly from GitHub:
 
 ```bash
-npx github:magp/Socle my-app
+npx github:elforn/socle my-app
 ```
 
 The CLI prompts for your app name, short name, modules, and accent colour, then creates `./my-app/` with everything wired up. Your code lives in `app/`. The library lives in `_lib/` and is updated separately.
@@ -79,7 +79,7 @@ Every library feature must be exercised in the reference app before it is consid
 Clone the monorepo to work on the library or run the reference app:
 
 ```bash
-git clone git@github.com:magp/Socle.git
+git clone git@github.com:elforn/socle.git
 cd Socle
 npm install
 ```

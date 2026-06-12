@@ -156,4 +156,4 @@ See [updating.md](updating.md) for full details on each command.
 
 ---
 
-[← Testing](testing.md) · [Docs](https://github.com/magp/Socle/blob/main/README.md#docs) · [Next: Theming →](theming.md)
+[← Testing](testing.md) · [Docs](https://github.com/elforn/socle/blob/main/README.md#docs) · [Next: Theming →](theming.md)
