@@ -10,6 +10,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.5] — 2026-06-13
+
+### Fixed
+- `reference-app/tests/e2e/update-flow.spec.js` and `scaffold/tests/e2e/update-flow.spec.js` — dynamic `import('./_lib/core/store/store.js')` broke with the bundled build (no `_lib/` in `dist/`). Replaced with `page.route('/version.json', ...)` to intercept the version check and trigger Layer 2 detection naturally. Test 4 (reload) also calls `page.unrouteAll()` before the reload so the banner does not reappear on the reloaded page.
+
+### Added
+- `library_tests/scaffold-parity.test.js` — E2E spec parity checks: verifies scaffold contains exactly the 5 expected infrastructure specs, enforces byte-for-byte identity on `install.spec.js` and `update-flow.spec.js`, and guards `update-flow.spec.js` against reverting to dynamic `_lib/` imports.
+
+---
+
 ## [0.9.4] — 2026-06-13
 
 ### Added

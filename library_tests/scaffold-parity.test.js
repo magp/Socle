@@ -9,7 +9,7 @@
  * Must all pass before any commit that touches reference-app/ infrastructure.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -134,6 +134,39 @@ describe('scaffold/tests/unit/store.test.js', () => {
   it('imports Store from _lib/core/store/store.js', () => {
     expect(read(scaffold, 'tests/unit/store.test.js'))
       .toContain('_lib/core/store/store.js');
+  });
+});
+
+// ─── tests/e2e/ ──────────────────────────────────────────────────────────────
+//
+// Scaffold E2E tests are infrastructure tests that belong in every scaffolded app.
+// Domain-specific specs (goals, i18n, theme, sync, toast, year-photo) live only
+// in the reference app and are not checked here.
+
+// Pure infrastructure specs — identical in scaffold and reference-app.
+// navigation/offline/persistence legitimately differ: reference-app uses /:year routes
+// and domain-specific components (year-header); scaffold versions use / and are generic.
+const SCAFFOLD_E2E_IDENTICAL = ['install.spec.js', 'update-flow.spec.js'];
+const SCAFFOLD_E2E_ALL = ['install.spec.js', 'navigation.spec.js', 'offline.spec.js', 'persistence.spec.js', 'update-flow.spec.js'];
+
+describe('scaffold/tests/e2e/', () => {
+  it('contains exactly the expected infrastructure spec files', () => {
+    const files = readdirSync(join(scaffold, 'tests/e2e')).filter(f => f.endsWith('.spec.js')).sort();
+    expect(files).toEqual([...SCAFFOLD_E2E_ALL].sort());
+  });
+
+  for (const spec of SCAFFOLD_E2E_IDENTICAL) {
+    it(`${spec} is identical between scaffold and reference-app`, () => {
+      expect(read(scaffold, 'tests/e2e', spec)).toBe(read(refApp, 'tests/e2e', spec));
+    });
+  }
+
+  it('update-flow.spec.js uses version.json interception, not dynamic _lib/ import', () => {
+    const src = read(scaffold, 'tests/e2e/update-flow.spec.js');
+    expect(src).toContain('version.json');
+    expect(src).toContain('routeFutureVersion');
+    expect(src).not.toContain("import('");
+    expect(src).not.toContain('_lib/core/store');
   });
 });
 
