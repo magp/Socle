@@ -458,6 +458,12 @@ export function scaffoldApp(options, destDir) {
       if (fs.existsSync(path.join(storeDir, to))) fs.unlinkSync(path.join(storeDir, to));
       if (fs.existsSync(path.join(storeDir, from))) fs.renameSync(path.join(storeDir, from), path.join(storeDir, to));
     }
+    // The renamed store.test.js still imports from './store-simple.js' (source name);
+    // patch it to './store.js' so it resolves correctly in the scaffolded app.
+    const testPath = path.join(storeDir, 'store.test.js');
+    if (fs.existsSync(testPath)) {
+      fs.writeFileSync(testPath, fs.readFileSync(testPath, 'utf8').replaceAll('./store-simple.js', './store.js'));
+    }
   } else {
     for (const f of ['store-simple.js', 'store-simple.test.js']) {
       const p = path.join(destDir, '_lib', 'core', 'store', f);
@@ -526,6 +532,10 @@ export async function updateLib(projectDir, ask) {
     for (const [from, to] of [['store-simple.js', 'store.js'], ['store-simple.test.js', 'store.test.js']]) {
       if (fs.existsSync(path.join(storeDir, to))) fs.unlinkSync(path.join(storeDir, to));
       if (fs.existsSync(path.join(storeDir, from))) fs.renameSync(path.join(storeDir, from), path.join(storeDir, to));
+    }
+    const testPath = path.join(storeDir, 'store.test.js');
+    if (fs.existsSync(testPath)) {
+      fs.writeFileSync(testPath, fs.readFileSync(testPath, 'utf8').replaceAll('./store-simple.js', './store.js'));
     }
   } else if (current.store === 'event-log') {
     for (const f of ['store-simple.js', 'store-simple.test.js']) {

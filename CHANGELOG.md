@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.9.4] — 2026-06-13
+
 ### Added
 - `npx socle update` now also updates `utils/build.js` (library-owned infrastructure) and syncs `package.json` devDependencies. Both steps show a diff and ask for confirmation before writing. A commit command and `npm install` reminder are printed when devDependencies change.
 - `scaffold/vitest.config.js` and `reference-app/vitest.config.js` — `_lib/**/*.test.js` added to the `include` pattern so library unit tests run in scaffolded apps. Changes to app code that break library internals are caught at test time.
@@ -16,13 +20,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Build pipeline replaced with esbuild: `utils/build.js` now bundles and minifies `app/main.js` and all `_lib/` imports into a single hashed ESM file with a source map. `dist/` no longer contains `_lib/` or `app/` directories — all JS is bundled. `tokens.css` is inlined into `index.html` as a `<style>` block. SW cache list shrinks from 50+ files to bundle + manifest + icons only.
 - `utils/` is now library-owned (same update rules as `_lib/`). Developers who need custom build behaviour will see a confirmation prompt before `socle update` overwrites it.
 
+### Fixed
+- `modules/sync/sync.test.js` — static named import of `dispatch` threw a `SyntaxError` at module load time in simple-store apps. Changed to a destructured access from `import * as Store`, with `it.skipIf(!dispatch)` on the four tests that seed data via dispatch.
+- `cli/index.js` — `store-simple.test.js` was renamed to `store.test.js` during scaffolding and update but its internal import path (`./store-simple.js`) was not patched to `./store.js`.
+
 ### Migration notes (for projects upgrading from ≤ 0.9.3)
-`socle update` does not yet automate the build migration for projects created before 0.9.4. Two manual steps required after running `npx socle update`:
+`socle update` from 0.9.4 handles `utils/build.js` and `package.json` devDependencies automatically. If upgrading manually:
 
 1. Copy the new `utils/build.js` from the [Socle scaffold](scaffold/utils/build.js) into your project.
 2. Run `npm install` to pull in `esbuild`.
-
-From 0.9.4 onwards, `socle update` handles both steps automatically.
 
 ---
 
